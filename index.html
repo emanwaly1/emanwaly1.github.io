@@ -7,7 +7,6 @@
 <meta name="description" content="Veterinary doctor, 3D medical artist and animator with a diploma in programming. Anatomy sculpts, disease animations and interactive models.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link  href="index 2.html">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -63,6 +62,7 @@ h2{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,4vw,2.8rem)
 .panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px}
 .js .panel[hidden]{display:none}
 .media{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:var(--mint)}
+.media.tall{aspect-ratio:auto;height:80vh}
 .media img,.media video,.media iframe{position:absolute;inset:0;width:100%;height:100%;border:0;object-fit:cover}
 .ph{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:16px;color:var(--dim);font-size:.95rem;
   background:repeating-linear-gradient(135deg,#d9ece6 0 14px,#cfe6df 14px 28px)}
@@ -165,21 +165,18 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
     <div class="viewer">
       <div class="tabs" role="tablist" aria-label="Projects"></div>
       <div id="panels">
-<article class="panel" data-title="Eye cross-section">
-  <!-- استبدلنا الـ ph القديم بـ iframe بيشاور على صفحة الموديل -->
-  <div class="media">
-    <iframe src="threejs-viewer/index2.html" title="The eye in cross-section" loading="lazy"></iframe>
-  </div>
-  <h3>The eye in cross-section</h3>
-  <p>A sculpted eye cut open to show its internal structures, lit and rendered for teaching.</p>
-  <div class="tools">ZBrush sculpt · Blender render · Premiere edit</div>
-</article>
+
+        <article class="panel" data-title="Eye cross-section">
+          <div class="media">
+            <iframe src="threejs-viewer/index2.html" title="The eye in cross-section" loading="lazy"></iframe>
+          </div>
+          <h3>The eye in cross-section</h3>
+          <p>A sculpted eye cut open to show its internal structures, lit and rendered for teaching.</p>
+          <div class="tools">ZBrush sculpt · Blender render · Premiere edit</div>
+        </article>
 
         <article class="panel" data-title="Humerus">
-          <div class="media"> <iframe id="gameFrame" data-src="blood-game.html"
-          title="Blood cell game"
-          allowfullscreen
-          style="width:100%; height:80vh; border:0; border-radius:12px;"></iframe>
+          <div class="media"><div class="ph">Add humerus model here</div></div>
           <h3>The humerus</h3>
           <p>A human humerus sculpted from reference images, from the proximal head down to the distal end.</p>
           <div class="tools">ZBrush</div>
@@ -225,6 +222,15 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
           <h3>Veterinary surgery, step by step</h3>
           <p>Instructional illustrations of two dog procedures: entropion and cherry eye.</p>
           <div class="tools">2D illustration</div>
+        </article>
+
+        <article class="panel" data-title="Blood cell game">
+          <div class="media tall">
+            <iframe data-src="blood-game.html" title="Blood cell game" allowfullscreen></iframe>
+          </div>
+          <h3>Blood cell game</h3>
+          <p>An interactive game about blood cells. Write your own description here.</p>
+          <div class="tools">HTML · JavaScript</div>
         </article>
 
         <article class="panel" data-title="Interactive heart">
@@ -300,12 +306,15 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   var groups=[
     ['3D anatomy',['Eye cross-section','Humerus','Brain']],
     ['Disease mechanisms',['Heart: five conditions','Blood: sickle cell','Artery plaque']],
-    ['2D and interactive',['Canine lungs','Vet surgery','Interactive heart']]
+    ['2D and interactive',['Canine lungs','Vet surgery','Blood cell game','Interactive heart']]
   ];
   var panels=[], buttons=[];
   function show(i){
     panels.forEach(function(p,n){p.hidden=n!==i});
     buttons.forEach(function(b,n){b.setAttribute('aria-selected',n===i)});
+    // lazy-load: iframes with data-src get their src only when their tab opens
+    var f=panels[i].querySelector('iframe[data-src]');
+    if(f && !f.getAttribute('src')) f.src=f.dataset.src;
   }
   groups.forEach(function(g){
     var h=document.createElement('div');h.className='grp';h.textContent=g[0];tabs.appendChild(h);
