@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>رحلة الدم</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1a0a0e;--panel:#2a1218;--ink:#fbeff0;--mut:#c9a3a8;--acc:#e8505b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:Tajawal,system-ui,sans-serif;color-scheme:dark;overflow:hidden}
+body{display:flex;flex-direction:column}
+header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;gap:8px;flex-wrap:wrap}
+h1{font-size:18px;margin:0}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+button{font:inherit;color:var(--ink);background:var(--panel);border:1px solid #4a2229;border-radius:999px;padding:7px 14px;cursor:pointer}
+button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.tabs{padding:0 14px 8px}
+#stage{position:relative;flex:1;min-height:0}
+canvas{width:100%;height:100%;display:block;touch-action:manipulation}
+#hud{position:absolute;top:8px;left:0;right:0;text-align:center;font-weight:700;pointer-events:none;text-shadow:0 1px 4px #000;padding:0 12px}
+#card{position:absolute;left:0;right:0;bottom:0;background:var(--panel);border-radius:18px 18px 0 0;padding:16px 18px 20px;transform:translateY(105%);transition:transform .25s;box-shadow:0 -6px 24px #0008}
+#card.open{transform:none}
+#card h2{margin:0 0 2px;font-size:20px}
+#card small{color:var(--mut);display:block;margin-bottom:8px}
+#card p{margin:0 0 10px;line-height:1.7}
+#card .note{font-size:12px;color:var(--mut)}
+#toast{position:absolute;top:44px;left:50%;transform:translateX(-50%);background:#000b;padding:6px 14px;border-radius:999px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>🩸 رحلة الدم</h1>
+  <div class="row" id="modes">
+    <button data-m="learn" class="on">تعلّم</button>
+    <button data-m="play">تحدّي</button>
+  </div>
+</header>
+<div class="tabs row" id="cats">
+  <button data-c="normal" class="on">الدم الطبيعي</button>
+  <button data-c="human">تشوهات في الإنسان</button>
+  <button data-c="animal">الدم عند الحيوان</button>
+</div>
+<div id="stage">
+  <canvas id="cv"></canvas>
+  <div id="hud"></div>
+  <div id="toast"></div>
+  <div id="card"></div>
+</div>
+
+<script>
+// لو رسمتي الخلايا: حطي صورة PNG شفافة لكل خلية هنا وهتظهر بدل الشكل التجريبي
+const IMG = {
+  // rbc: 'cells/rbc.png',
+  // sickle: 'cells/sickle.png',
+};
+const imgs = {};
+for (const k in IMG) { const i = new Image(); i.src = IMG[k]; imgs[k] = i; }
+
+const E = (c, x, y, rx, ry, f, a = 0) => { c.beginPath(); c.ellipse(x, y, rx, ry, a, 0, 7); c.fillStyle = f; c.fill(); };
+const RED = '#d9363e', DRK = '#a82530';
+
+const CELLS = [
+ {id:'rbc',cat:'normal',n:'خلية دم حمراء',en:'Red blood cell',r:20,
+  t:'بتنقل الأكسجين بواسطة الهيموجلوبين. شكلها قرص مقعّر من الجهتين، ومن غير نواة عند الثدييات.',
+  d:(c,r)=>{E(c,0,0,r,r,RED);E(c,0,0,r*.5,r*.5,DRK)}},
+ {id:'wbc',cat:'normal',n:'خلية دم بيضاء',en:'White blood cell',r:28,
+  t:'خلية مناعية أكبر من الحمراء ولها نواة. بتدافع عن الجسم ضد العدوى.',
+  d:(c,r)=>{E(c,0,0,r,r,'#e9dfe6');E(c,-r*.15,0,r*.55,r*.45,'#7a4fa3');E(c,r*.35,r*.1,r*.3,r*.3,'#7a4fa3')}},
+ {id:'plt',cat:'normal',n:'صفائح دموية',en:'Platelet',r:11,
+  t:'أجزاء صغيرة من خلايا أكبر اسمها megakaryocyte. بتساعد الدم على التجلط.',
+  d:(c,r)=>{E(c,0,0,r,r*.7,'#b58ad6');E(c,r*.2,0,r*.3,r*.2,'#8d5cb5')}},
+ {id:'sickle',cat:'human',n:'خلية منجلية',en:'Sickle cell',r:24,
+  t:'بتتشوه لشكل هلال بسبب هيموجلوبين غير طبيعي، وممكن تعلق في الأوعية الصغيرة.',
+  d:(c,r)=>{c.beginPath();c.moveTo(-r*1.2,0);c.quadraticCurveTo(0,-r*1.2,r*1.2,0);c.quadraticCurveTo(0,-r*.4,-r*1.2,0);c.fillStyle=DRK;c.fill()}},
+ {id:'target',cat:'human',n:'خلية هدفية',en:'Target cell',r:20,
+  t:'مركزها غامق وحواليه حلقة فاتحة. بتظهر في الثلاسيميا وبعض أمراض الكبد.',
+  d:(c,r)=>{E(c,0,0,r,r,RED);E(c,0,0,r*.62,r*.62,'#f0a0a4');E(c,0,0,r*.3,r*.3,DRK)}},
+ {id:'sphero',cat:'human',n:'خلية كروية',en:'Spherocyte',r:15,
+  t:'صغيرة وغامقة ومن غير منطقة شاحبة في النص. بتظهر في أنيميا انحلال الدم.',
+  d:(c,r)=>{E(c,0,0,r,r,'#8e1f2b')}},
+ {id:'schisto',cat:'human',n:'خلية متشظية',en:'Schistocyte',r:17,
+  t:'أجزاء مكسورة من الخلية الحمراء، بتظهر لما الخلايا تتقطع وهي ماشية في أوعية متضررة.',
+  d:(c,r)=>{c.beginPath();[[-.9,-.3],[-.2,-.9],[.8,-.4],[.5,.2],[.9,.7],[-.4,.5]].forEach(([a,b],i)=>i?c.lineTo(a*r,b*r):c.moveTo(a*r,b*r));c.closePath();c.fillStyle=RED;c.fill()}},
+ {id:'camel',cat:'animal',n:'خلية الجمل',en:'Camelid red cell',r:21,
+  t:'عند الجمل واللاما: خلايا الدم الحمراء بيضاوية ومن غير نواة.',
+  d:(c,r)=>{E(c,0,0,r*1.25,r*.7,RED);E(c,0,0,r*.6,r*.3,DRK)}},
+ {id:'bird',cat:'animal',n:'خلية طائر',en:'Avian red cell',r:21,
+  t:'عند الطيور: خلايا الدم الحمراء بيضاوية وفيها نواة.',
+  d:(c,r)=>{E(c,0,0,r*1.15,r*.8,'#e2606a');E(c,0,0,r*.45,r*.4,'#5a1f4d')}},
+ {id:'heinz',cat:'animal',n:'أجسام هاينز',en:'Heinz bodies',r:20,
+  t:'تكتلات هيموجلوبين اتضرر بالأكسدة. بتظهر كنقط على حافة الخلية، وشائعة عند القطط.',
+  d:(c,r)=>{E(c,0,0,r,r,RED);E(c,r*.75,-r*.3,r*.22,r*.22,'#3b1a22');E(c,-r*.6,r*.5,r*.18,r*.18,'#3b1a22')}},
+ {id:'babesia',cat:'animal',n:'طفيل البابيزيا',en:'Babesia',r:21,
+  t:'طفيل بيعيش جوه الخلايا الحمراء ويسبب أنيميا انحلالية، خصوصًا عند الكلاب.',
+  d:(c,r)=>{E(c,0,0,r,r,RED);E(c,-r*.3,-r*.1,r*.28,r*.16,'#5b6ee0',.6);E(c,r*.25,r*.2,r*.28,r*.16,'#5b6ee0',-.6)}}
+];
+
+const cv = document.getElementById('cv'), x = cv.getContext('2d');
+const card = document.getElementById('card'), hud = document.getElementById('hud'), toast = document.getElementById('toast');
+let W, H, cells = [], cat = 'normal', mode = 'learn', frozen = false, sel = null;
+let score = 0, time = 45, target = null, running = false, last = 0;
+
+function resize() {
+  const d = devicePixelRatio || 1;
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = W * d; cv.height = H * d; x.setTransform(d, 0, 0, d, 0, 0);
+}
+addEventListener('resize', resize);
+
+const top_ = () => H * .1, bot_ = () => H * .66;
+const pool = () => { const p = CELLS.filter(c => c.cat === cat); return cat === 'normal' ? p : p.concat(p, [CELLS[0], CELLS[0], CELLS[0]]); };
+
+function spawn(initial) {
+  const t = pool()[Math.random() * pool().length | 0];
+  const r = t.r * (.9 + Math.random() * .25);
+  const a = top_() + r + 6, b = bot_() - r - 6;
+  const y = a + Math.random() * (b - a);
+  const lane = (y - (a + b) / 2) / ((b - a) / 2);
+  cells.push({ t, r, y, x: initial ? Math.random() * W : -r * 2, vx: (45 + Math.random() * 25) * (1.2 - lane * lane * .8), a: Math.random() * 6.28, va: (Math.random() - .5) * 1.2 });
+}
+function fill() { cells = []; for (let i = 0; i < 16; i++) spawn(true); }
+
+function drawVessel(ts) {
+  const g = x.createLinearGradient(0, top_() - 30, 0, bot_() + 30);
+  g.addColorStop(0, '#5a1520'); g.addColorStop(.1, '#2a0d13'); g.addColorStop(.9, '#2a0d13'); g.addColorStop(1, '#5a1520');
+  x.fillStyle = '#2a0d13'; x.fillRect(0, top_(), W, bot_() - top_());
+  x.fillStyle = '#6b1a27'; x.fillRect(0, top_() - 22, W, 22); x.fillRect(0, bot_(), W, 22);
+  x.fillStyle = '#8a2536'; x.fillRect(0, top_() - 6, W, 6); x.fillRect(0, bot_(), W, 6);
+}
+
+function frame(ts) {
+  const dt = Math.min((ts - last) / 1000, .05); last = ts;
+  const sp = frozen ? .06 : 1;
+  x.clearRect(0, 0, W, H);
+  drawVessel(ts);
+  for (let i = cells.length - 1; i >= 0; i--) {
+    const c = cells[i];
+    c.x += c.vx * dt * sp; c.a += c.va * dt * sp;
+    if (c.x > W + c.r * 2) { cells.splice(i, 1); spawn(false); continue; }
+  }
+  for (const c of cells) {
+    x.save(); x.translate(c.x, c.y); x.rotate(c.a);
+    const im = imgs[c.t.id];
+    if (im && im.complete && im.naturalWidth) x.drawImage(im, -c.r, -c.r, c.r * 2, c.r * 2); else c.t.d(x, c.r);
+    x.restore();
+    if (c === sel) { x.beginPath(); x.arc(c.x, c.y, c.r * 1.5, 0, 7); x.strokeStyle = '#fff'; x.lineWidth = 2; x.stroke(); }
+  }
+  if (running) {
+    time -= dt;
+    if (time <= 0) endGame(); else hud.textContent = `اصطادي: ${target.n}  •  النقاط ${score}  •  ${Math.ceil(time)}ث`;
+  }
+  requestAnimationFrame(frame);
+}
+
+function say(s) { toast.textContent = s; toast.classList.add('show'); clearTimeout(say.t); say.t = setTimeout(() => toast.classList.remove('show'), 1600); }
+function closeCard() { card.classList.remove('open'); frozen = false; sel = null; }
+function showCard(html) { card.innerHTML = html; card.classList.add('open'); }
+
+function newTarget() {
+  const p = CELLS.filter(c => c.cat === cat);
+  let t; do { t = p[Math.random() * p.length | 0]; } while (p.length > 1 && t === target);
+  target = t;
+}
+
+function startGame() {
+  closeCard(); score = 0; time = 45; running = true; newTarget(); fill();
+}
+function endGame() {
+  running = false; hud.textContent = ''; frozen = true;
+  showCard(`<h2>خلص الوقت! النتيجة: ${score}</h2><p>جرّبي قسم تاني أو العبي تاني.</p><button class="on" id="again">العبي تاني</button>`);
+  document.getElementById('again').onclick = () => { frozen = false; startGame(); };
+}
+
+cv.addEventListener('pointerdown', e => {
+  const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+  let best = null, bd = 1e9;
+  for (const c of cells) { const d = Math.hypot(c.x - px, c.y - py); if (d < c.r * 1.4 && d < bd) { best = c; bd = d; } }
+  if (!best) { if (mode === 'learn') closeCard(); return; }
+  if (mode === 'learn') {
+    sel = best; frozen = true;
+    showCard(`<h2>${best.t.n}</h2><small>${best.t.en}</small><p>${best.t.t}</p><p class="note">نص تجريبي — يُراجَع طبيًا قبل النشر</p><button id="x">كمّل</button>`);
+    document.getElementById('x').onclick = closeCard;
+  } else if (running) {
+    if (best.t === target) { score++; say('✅ صح'); cells.splice(cells.indexOf(best), 1); spawn(false); newTarget(); }
+    else say(`❌ دي ${best.t.n}`);
+  }
+});
+
+function setMode(m) {
+  mode = m; running = false; closeCard(); hud.textContent = '';
+  document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  fill();
+  if (m === 'play') startGame(); else { hud.textContent = 'اضغطي على أي خلية'; }
+}
+document.getElementById('modes').onclick = e => { if (e.target.dataset.m) setMode(e.target.dataset.m); };
+document.getElementById('cats').onclick = e => {
+  if (!e.target.dataset.c) return;
+  cat = e.target.dataset.c;
+  document.querySelectorAll('#cats button').forEach(b => b.classList.toggle('on', b.dataset.c === cat));
+  setMode(mode);
+};
+
+resize(); setMode('learn'); requestAnimationFrame(t => { last = t; frame(t); });
+</script>
+</body>
+</html>
