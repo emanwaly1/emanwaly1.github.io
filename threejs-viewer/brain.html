@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brain 3D Viewer</title>
+<style>
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{background:#f1f6f4;color:#22313a;font:500 1rem system-ui,sans-serif;display:flex;flex-direction:column}
+  #viewer{flex:1;min-height:0;position:relative;touch-action:none}
+  #viewer canvas{display:block;width:100%;height:100%}
+  #label{position:absolute;left:16px;bottom:16px;background:#fff;border:1px solid #d3e0dc;border-radius:999px;padding:8px 18px}
+  #hint{position:absolute;right:16px;bottom:16px;color:#5a6b73;font-size:.9rem}
+  #loading{position:absolute;inset:0;display:grid;place-items:center;background:#f1f6f4;z-index:5;font-size:1.1rem}
+  #panel{position:absolute;top:12px;left:12px;background:#fffd;border:1px solid #d3e0dc;border-radius:14px;padding:10px 14px;font-size:.9rem;display:flex;flex-direction:column;gap:6px;max-width:210px}
+  #panel label{display:flex;align-items:center;gap:8px;cursor:pointer}
+  #panel .sep{height:1px;background:#d3e0dc;margin:4px 0}
+  #panel input[type=range]{width:100%}
+</style>
+</head>
+<body>
+<div id="viewer">
+  <div id="loading">Loading brain… 0%</div>
+  <div id="panel">
+    <label><input type="checkbox" data-group="arteries" checked> Arteries</label>
+    <label><input type="checkbox" data-group="nerves" checked> Nerves</label>
+    <label><input type="checkbox" data-group="sinus" checked> Dural venous sinuses</label>
+    <label><input type="checkbox" data-group="midbrain" checked> Midbrain</label>
+    <label><input type="checkbox" data-group="left" checked> Left lobe</label>
+    <label><input type="checkbox" data-group="right" checked> Right lobe</label>
+    <div class="sep"></div>
+    <label style="flex-direction:column;align-items:stretch">Lobes transparency
+      <input type="range" id="opacity" min="0.1" max="1" step="0.05" value="1">
+    </label>
+  </div>
+  <div id="label">Click a part to see its name</div>
+  <div id="hint">Drag to rotate · Scroll to zoom</div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const MODEL_FILE = 'brain.glb';   // exported from Blender, next to this file
+
+// Which object names belong to which group (matched on the start of the name,
+// ignoring case, spaces, dots, underscores and numbers).
+const GROUP_RULES = {
+  arteries: /^art/,
+  nerves:   /^nerv/,
+  sinus:    /^(dural|sinus)/,
+  midbrain: /^mid/,
+  left:     /^left/,
+  right:    /^right/
+};
+
+const box = document.getElementById('viewer');
+const label = document.getElementById('label');
+const loadingEl = document.getElementById('loading');
+
+// 1) scene, camera, renderer
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf1f6f4);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+box.appendChild(renderer.domElement);
+
+// 2) lights
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0xbfd3cd, 0.8));
+const sun = new THREE.DirectionalLight(0xffffff, 2);
+sun.position.set(3, 5, 4);
+scene.add(sun);
+
+// 3) controls
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// 4) model
+let model;
+const groups = {};          // group name -> array of meshes
+const FIX_MATERIALS = true;
+
+function setModel(obj) {
+  model = obj;
+  obj.traverse((o) => {
+    if (!o.isMesh) return;
+    if (FIX_MATERIALS && o.material) {
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach((m) => {
+        m.side = THREE.DoubleSide;
+        if (m.metalness !== undefined && m.metalness > 0.5) m.metalness = 0.2;
+      });
+    }
+    const key = o.name.toLowerCase().replace(/[^a-z]/g, '');
+    const g = Object.keys(GROUP_RULES).find((k) => GROUP_RULES[k].test(key));
+    if (g) (groups[g] ||= []).push(o);
+    else console.log('Not in any group:', o.name);
+  });
+  scene.add(obj);
+
+  const b = new THREE.Box3().setFromObject(obj);
+  const size = b.getSize(new THREE.Vector3());
+  const center = b.getCenter(new THREE.Vector3());
+  const dist = Math.max(size.x, size.y, size.z) * 1.8;
+  camera.position.set(center.x, center.y, center.z + dist);
+  camera.near = dist / 100;
+  camera.far = dist * 100;
+  camera.updateProjectionMatrix();
+  controls.target.copy(center);
+  controls.update();
+}
+
+// 5) load with progress + Draco support
+const draco = new DRACOLoader();
+draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+const loader = new GLTFLoader();
+loader.setDRACOLoader(draco);
+loader.load(
+  MODEL_FILE,
+  (gltf) => { setModel(gltf.scene); loadingEl.style.display = 'none'; },
+  (e) => { if (e.total) loadingEl.textContent = 'Loading brain… ' + Math.round((e.loaded / e.total) * 100) + '%'; },
+  () => { loadingEl.textContent = 'Could not load ' + MODEL_FILE; }
+);
+
+// 6) show / hide groups
+document.querySelectorAll('#panel input[data-group]').forEach((cb) => {
+  cb.addEventListener('change', () => {
+    (groups[cb.dataset.group] || []).forEach((m) => (m.visible = cb.checked));
+    clearSelection();
+  });
+});
+
+// 7) lobes transparency (to see the midbrain from inside)
+document.getElementById('opacity').addEventListener('input', (e) => {
+  const v = parseFloat(e.target.value);
+  [...(groups.left || []), ...(groups.right || [])].forEach((m) => {
+    const mats = Array.isArray(m.material) ? m.material : [m.material];
+    mats.forEach((mat) => {
+      mat.transparent = v < 1;
+      mat.opacity = v;
+      mat.depthWrite = v >= 1;
+      mat.needsUpdate = true;
+    });
+  });
+});
+
+// 8) click a part -> name + highlight (only that part, even if materials are shared)
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let down = [0, 0];
+let selected = null;
+
+function clearSelection() {
+  if (selected) { selected.material = selected.userData.origMat; selected = null; }
+  label.textContent = 'Click a part to see its name';
+}
+
+renderer.domElement.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!model || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const visible = [];
+  model.traverse((o) => { if (o.isMesh && o.visible) visible.push(o); });
+  const hit = ray.intersectObjects(visible, false)[0];
+  clearSelection();
+  if (hit) {
+    selected = hit.object;
+    selected.userData.origMat = selected.material;
+    selected.material = selected.material.clone();
+    selected.material.emissive = new THREE.Color(0xffaa00);
+    selected.material.emissiveIntensity = 0.5;
+    // hide the group prefix: "Arteries_Basilar_artery" -> "Basilar artery"
+    const key = selected.name.toLowerCase().replace(/[^a-z]/g, '');
+    const inGroup = Object.values(GROUP_RULES).some((rule) => rule.test(key));
+    const shown = inGroup && selected.name.includes('_') ? selected.name.slice(selected.name.indexOf('_') + 1) : selected.name;
+    label.textContent = shown.replace(/_/g, ' ') || '(unnamed part)';
+  }
+});
+
+// 9) resize + render
+function resize() {
+  const w = box.clientWidth, h = box.clientHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>
