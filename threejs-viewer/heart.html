@@ -8,34 +8,44 @@
   *{box-sizing:border-box;margin:0}
   html,body{height:100%}
   body{background:#f1f6f4;color:#22313a;font:500 1rem system-ui,sans-serif;display:flex;flex-direction:column}
-  #viewer{flex:1;min-height:0;position:relative;touch-action:none}
+  #viewer{flex:1;min-height:0;position:relative;touch-action:none;overflow:hidden}
   #viewer canvas{display:block;width:100%;height:100%}
-  #label{position:absolute;left:16px;bottom:16px;background:#fff;border:1px solid #d3e0dc;border-radius:999px;padding:8px 18px}
-  #hint{position:absolute;right:16px;bottom:16px;color:#5a6b73;font-size:.9rem}
-  #loading{position:absolute;inset:0;display:grid;place-items:center;background:#f1f6f4cc;z-index:5;font-size:1.1rem}
-  #panel{position:absolute;top:12px;left:12px;background:#fffd;border:1px solid #d3e0dc;border-radius:14px;padding:10px 14px;font-size:.9rem;display:flex;flex-direction:column;gap:6px;max-width:220px;max-height:calc(100% - 70px);overflow:auto}
-  #panel label{display:flex;align-items:center;gap:8px;cursor:pointer}
-  #panel .sep{height:1px;background:#d3e0dc;margin:4px 0}
-  #panel input[type=range]{width:100%}
-  #models{display:flex;flex-wrap:wrap;gap:6px}
-  #models button{font:500 .85rem system-ui,sans-serif;background:transparent;border:1px solid #d3e0dc;border-radius:999px;padding:5px 12px;color:#22313a;cursor:pointer}
-  #models button[aria-pressed="true"]{background:#d9566f;border-color:#d9566f;color:#fff}
+  #loading{position:absolute;inset:0;display:grid;place-items:center;background:#f1f6f4;z-index:9;font-size:1.1rem;text-align:center;padding:20px}
+  #label{position:absolute;left:16px;top:16px;background:#fff;border:1px solid #d3e0dc;border-radius:999px;padding:8px 18px;max-width:70%}
+  #hint{position:absolute;right:16px;top:22px;color:#5a6b73;font-size:.9rem}
+  #bar{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:calc(100% - 24px);z-index:3}
+  .grp{display:flex;gap:4px;background:#fffd;border:1px solid #d3e0dc;border-radius:999px;padding:4px}
+  #bar button{font:500 .92rem system-ui,sans-serif;background:transparent;border:0;border-radius:999px;padding:8px 16px;color:#22313a;cursor:pointer}
+  #bar button:hover{background:#eef4f2}
+  #bar button[aria-pressed="true"]{background:#d9566f;color:#fff}
+  #bar button:disabled{opacity:.4;cursor:not-allowed}
+  #divider{position:absolute;top:0;bottom:0;left:50%;width:44px;margin-left:-22px;cursor:ew-resize;touch-action:none;display:none;z-index:2}
+  #divider::before{content:"";position:absolute;left:21px;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 0 1px #0002}
+  #divider i{position:absolute;left:6px;top:50%;margin-top:-16px;width:32px;height:32px;border-radius:50%;background:#fff;box-shadow:0 1px 6px #0003;display:grid;place-items:center;font-style:normal;color:#d9566f}
+  .tag{position:absolute;top:64px;background:#fffd;border:1px solid #d3e0dc;border-radius:999px;padding:4px 12px;font-size:.85rem;display:none;z-index:1}
+  #tagL{left:16px}#tagR{right:16px}
 </style>
 </head>
 <body>
 <div id="viewer">
-  <div id="loading">Loading…</div>
-  <div id="panel">
-    <div id="models"></div>
-    <div class="sep"></div>
-    <div id="parts"></div>
-    <div class="sep"></div>
-    <label style="flex-direction:column;align-items:stretch">Transparency
-      <input type="range" id="opacity" min="0.1" max="1" step="0.05" value="1">
-    </label>
-  </div>
+  <div id="loading">Loading heart…</div>
   <div id="label">Click a part to see its name</div>
   <div id="hint">Drag to rotate · Scroll to zoom</div>
+  <div class="tag" id="tagL">External</div>
+  <div class="tag" id="tagR">Cross section</div>
+  <div id="divider"><i>↔</i></div>
+  <div id="bar">
+    <div class="grp" id="modes">
+      <button data-mode="external" aria-pressed="true">External</button>
+      <button data-mode="cross" aria-pressed="false">Cross section</button>
+      <button data-mode="compare" aria-pressed="false">Compare</button>
+    </div>
+    <div class="grp">
+      <button id="beat" aria-pressed="false">♥ Heartbeat</button>
+      <button id="spin" aria-pressed="true">Rotate</button>
+      <button id="reset">Reset view</button>
+    </div>
+  </div>
 </div>
 
 <script type="importmap">
@@ -52,162 +62,183 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-// ADD MORE MODELS HERE: one line per .glb file (put the file next to this page).
-// Each one gets its own button. Loaded only when its button is clicked.
-const MODELS = [
-  { label: 'External',      file: 'heart.glb' },
-  { label: 'Cross section', file: 'heart-cross-section.glb' }
-  // { label: 'Another view', file: 'heart-another.glb' },
-];
+// The two model files (put them next to this page). Export both from the same
+// scene so they share one origin and scale: that is what makes Compare line up.
+const EXTERNAL_FILE = 'heart.glb';
+const CROSS_FILE = 'heart-cross-section.glb';
 
 const box = document.getElementById('viewer');
 const label = document.getElementById('label');
 const loadingEl = document.getElementById('loading');
-const modelsEl = document.getElementById('models');
-const partsEl = document.getElementById('parts');
+const divider = document.getElementById('divider');
+const tags = [document.getElementById('tagL'), document.getElementById('tagR')];
+const modeBtns = [...document.querySelectorAll('#modes button')];
+const beatBtn = document.getElementById('beat');
+const spinBtn = document.getElementById('spin');
 
+// scene
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf1f6f4);
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.85;   // overall brightness (1 = default)
 box.appendChild(renderer.domElement);
 
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 scene.add(new THREE.HemisphereLight(0xffffff, 0xbfd3cd, 0.8));
-const sun = new THREE.DirectionalLight(0xffffff, 2);
+const sun = new THREE.DirectionalLight(0xffffff, 1.5);
 sun.position.set(3, 5, 4);
 scene.add(sun);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.autoRotate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+controls.autoRotateSpeed = 1.2;
+spinBtn.setAttribute('aria-pressed', controls.autoRotate);
 
+const pivot = new THREE.Group();   // both models live here (the heartbeat scales it)
+scene.add(pivot);
+
+// loading
 const draco = new DRACOLoader();
 draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
 const loader = new GLTFLoader();
 loader.setDRACOLoader(draco);
 try { loader.setMeshoptDecoder((await import('three/addons/libs/meshopt_decoder.module.js')).MeshoptDecoder); } catch (e) { console.warn('Meshopt decoder not available', e); }
 
-const cache = {};          // file -> loaded scene
-let current = null;        // currently shown scene
-let framed = false;
-let selected = null;
+const load = (file) => new Promise((res, rej) => loader.load(file, (g) => res(g.scene), undefined, rej));
 
-function frame(obj) {
-  const b = new THREE.Box3().setFromObject(obj);
-  const size = b.getSize(new THREE.Vector3());
-  const center = b.getCenter(new THREE.Vector3());
-  const dist = Math.max(size.x, size.y, size.z) * 1.8;
-  camera.position.set(center.x, center.y, center.z + dist);
-  camera.near = dist / 100;
-  camera.far = dist * 100;
-  camera.updateProjectionMatrix();
-  controls.target.copy(center);
-  controls.update();
-}
-
-function prepare(obj) {
+function prepare(obj, layer) {
   obj.traverse((o) => {
+    o.layers.set(layer);               // layer 1 = external, layer 2 = cross section (used by Compare)
     if (!o.isMesh || !o.material) return;
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    mats.forEach((m) => {
+    (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => {
       m.side = THREE.DoubleSide;
       if (m.metalness !== undefined && m.metalness > 0.5) m.metalness = 0.2;
+      m.userData.base = { t: m.transparent, o: m.opacity, d: m.depthWrite };
     });
   });
 }
 
-// one checkbox per group of parts (group = name before the first "_")
-function buildParts(obj) {
-  partsEl.innerHTML = '';
-  const groups = {};
-  obj.traverse((o) => {
+function setOpacity(model, v) {      // used for the cross-fade
+  model.traverse((o) => {
     if (!o.isMesh) return;
-    const key = o.name.split('_')[0] || '(unnamed)';
-    (groups[key] ||= []).push(o);
-  });
-  const keys = Object.keys(groups);
-  if (keys.length < 2) return;
-  keys.forEach((k) => {
-    const l = document.createElement('label');
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = true;
-    cb.addEventListener('change', () => { groups[k].forEach((m) => (m.visible = cb.checked)); clearSelection(); });
-    l.append(cb, k.replace(/([a-z])([A-Z])/g, '$1 $2'));
-    partsEl.appendChild(l);
+    (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => {
+      const b = m.userData.base, before = m.transparent;
+      if (v >= 1) { m.transparent = b.t; m.opacity = b.o; m.depthWrite = b.d; }
+      else { m.transparent = true; m.opacity = b.o * v; m.depthWrite = false; }
+      if (m.transparent !== before) m.needsUpdate = true;
+    });
   });
 }
 
-function show(file) {
-  if (current) scene.remove(current);
+// modes: external | cross | compare
+const M = { external: null, cross: null };
+let mode = null, trans = null, split = 0.5, home = null;
+
+function finishTrans() {
+  trans.from.visible = false;
+  setOpacity(trans.from, 1);
+  setOpacity(trans.to, 1);
+  trans = null;
+}
+
+function setMode(m) {
+  if (m === mode || !M.external && m === 'external' || !M.cross && m === 'cross') return;
+  if (trans) finishTrans();
   clearSelection();
-  current = cache[file];
-  scene.add(current);
-  if (!framed) { frame(current); framed = true; }
-  buildParts(current);
-  document.getElementById('opacity').value = 1;
-  [...modelsEl.children].forEach((b) => b.setAttribute('aria-pressed', b.dataset.file === file));
+  const prev = mode;
+  mode = m;
+  modeBtns.forEach((b) => b.setAttribute('aria-pressed', b.dataset.mode === m));
+  const compare = m === 'compare';
+  divider.style.display = compare ? 'block' : 'none';
+  tags.forEach((t) => (t.style.display = compare ? 'block' : 'none'));
+  if (compare) { M.external.visible = true; M.cross.visible = true; return; }
+  const next = M[m];
+  const old = prev === 'external' || prev === 'cross' ? M[prev] : null;
+  next.visible = true;
+  if (old && old !== next) trans = { from: old, to: next, t0: performance.now() };
+  else { if (M.external) M.external.visible = next === M.external; if (M.cross) M.cross.visible = next === M.cross; }
 }
 
-function select(file) {
-  if (cache[file]) return show(file);
-  loadingEl.style.display = 'grid';
-  loadingEl.textContent = 'Loading… 0%';
-  loader.load(file, (gltf) => {
-    prepare(gltf.scene);
-    cache[file] = gltf.scene;
-    loadingEl.style.display = 'none';
-    show(file);
-  }, (e) => {
-    loadingEl.textContent = 'Loading… ' + (e.total ? Math.round((e.loaded / e.total) * 100) + '%' : (e.loaded / 1048576).toFixed(1) + ' MB');
-  }, () => {
-    loadingEl.textContent = 'Could not load ' + file;
-    setTimeout(() => { loadingEl.style.display = 'none'; }, 2500);
+Promise.allSettled([load(EXTERNAL_FILE), load(CROSS_FILE)]).then(([a, b]) => {
+  if (a.status === 'fulfilled') { M.external = a.value; prepare(M.external, 1); }
+  if (b.status === 'fulfilled') { M.cross = b.value; prepare(M.cross, 2); }
+  const base = M.external || M.cross;
+  if (!base) { loadingEl.textContent = 'Could not load ' + EXTERNAL_FILE + ' or ' + CROSS_FILE; return; }
+
+  const bb = new THREE.Box3().setFromObject(base);
+  const size = bb.getSize(new THREE.Vector3());
+  const center = bb.getCenter(new THREE.Vector3());
+  [M.external, M.cross].forEach((m) => { if (m) { m.position.sub(center); pivot.add(m); m.visible = false; } });
+
+  const dist = Math.max(size.x, size.y, size.z) * 1.8;
+  camera.position.set(0, 0, dist);
+  camera.near = dist / 100;
+  camera.far = dist * 100;
+  camera.updateProjectionMatrix();
+  controls.target.set(0, 0, 0);
+  controls.update();
+  home = camera.position.clone();
+
+  modeBtns.forEach((btn) => {
+    const k = btn.dataset.mode;
+    if ((k === 'external' && !M.external) || (k === 'cross' && !M.cross) || (k === 'compare' && !(M.external && M.cross))) btn.disabled = true;
   });
+  if (!M.external) label.textContent = 'Could not load ' + EXTERNAL_FILE;
+  if (!M.cross) label.textContent = 'Could not load ' + CROSS_FILE;
+  setMode(M.external ? 'external' : 'cross');
+  loadingEl.style.display = 'none';
+});
+
+// buttons
+document.getElementById('modes').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (b && !b.disabled) setMode(b.dataset.mode);
+});
+let beat = false, amp = 0;
+beatBtn.addEventListener('click', () => { beat = !beat; beatBtn.setAttribute('aria-pressed', beat); });
+spinBtn.addEventListener('click', () => { controls.autoRotate = !controls.autoRotate; spinBtn.setAttribute('aria-pressed', controls.autoRotate); });
+document.getElementById('reset').addEventListener('click', () => { if (home) { camera.position.copy(home); controls.target.set(0, 0, 0); controls.update(); } });
+
+// Compare divider
+let dragging = false;
+function setSplit(x) {
+  const r = box.getBoundingClientRect();
+  split = Math.min(0.95, Math.max(0.05, (x - r.left) / r.width));
+  divider.style.left = split * 100 + '%';
 }
+divider.addEventListener('pointerdown', (e) => { dragging = true; divider.setPointerCapture(e.pointerId); e.preventDefault(); });
+divider.addEventListener('pointermove', (e) => { if (dragging) setSplit(e.clientX); });
+divider.addEventListener('pointerup', () => { dragging = false; });
+divider.addEventListener('pointercancel', () => { dragging = false; });
 
-MODELS.forEach((m) => {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.textContent = m.label;
-  b.dataset.file = m.file;
-  b.setAttribute('aria-pressed', 'false');
-  b.addEventListener('click', () => select(m.file));
-  modelsEl.appendChild(b);
-});
-select(MODELS[0].file);
-
-document.getElementById('opacity').addEventListener('input', (e) => {
-  if (!current) return;
-  const v = parseFloat(e.target.value);
-  clearSelection();
-  current.traverse((o) => {
-    if (!o.isMesh) return;
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    mats.forEach((mat) => { mat.transparent = v < 1; mat.opacity = v; mat.depthWrite = v >= 1; mat.needsUpdate = true; });
-  });
-});
-
+// click a part -> name + highlight
 const ray = new THREE.Raycaster();
+ray.layers.enableAll();
 const mouse = new THREE.Vector2();
-let down = [0, 0];
+let down = [0, 0], selected = null;
 
 function clearSelection() {
   if (selected) { selected.material = selected.userData.origMat; selected = null; }
   label.textContent = 'Click a part to see its name';
 }
-
-renderer.domElement.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  down = [e.clientX, e.clientY];
+  controls.autoRotate = false;
+  spinBtn.setAttribute('aria-pressed', false);
+});
 renderer.domElement.addEventListener('pointerup', (e) => {
-  if (!current || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+  if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
   const r = renderer.domElement.getBoundingClientRect();
   mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(mouse, camera);
+  const side = mode === 'compare' ? [(e.clientX - r.left) / r.width < split ? M.external : M.cross] : [M.external, M.cross].filter((m) => m && m.visible);
   const meshes = [];
-  current.traverse((o) => { if (o.isMesh && o.visible) meshes.push(o); });
+  side.forEach((m) => m.traverse((o) => { if (o.isMesh) meshes.push(o); }));
   const hit = ray.intersectObjects(meshes, false)[0];
   clearSelection();
   if (hit) {
@@ -228,7 +259,42 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 resize();
-renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+
+renderer.setAnimationLoop(() => {
+  controls.update();
+
+  // heartbeat: a "lub-dub" pulse (about 75 beats per minute)
+  amp += ((beat ? 1 : 0) - amp) * 0.1;
+  const t = (performance.now() / 1000) % 0.8;
+  const p = Math.exp(-(((t - 0.08) / 0.045) ** 2)) + 0.65 * Math.exp(-(((t - 0.3) / 0.06) ** 2));
+  pivot.scale.setScalar(1 + 0.04 * p * amp);
+
+  // cross-fade between External and Cross section
+  if (trans) {
+    const k = Math.min(1, (performance.now() - trans.t0) / 450);
+    const e = k * k * (3 - 2 * k);
+    setOpacity(trans.from, 1 - e);
+    setOpacity(trans.to, e);
+    if (k === 1) finishTrans();
+  }
+
+  const w = box.clientWidth, h = box.clientHeight;
+  if (mode === 'compare') {
+    const x = Math.round(w * split);
+    renderer.setScissorTest(true);
+    renderer.setViewport(0, 0, w, h);
+    camera.layers.set(0); camera.layers.enable(1);
+    renderer.setScissor(0, 0, x, h);
+    renderer.render(scene, camera);
+    camera.layers.set(0); camera.layers.enable(2);
+    renderer.setScissor(x, 0, w - x, h);
+    renderer.render(scene, camera);
+  } else {
+    renderer.setScissorTest(false);
+    camera.layers.enableAll();
+    renderer.render(scene, camera);
+  }
+});
 </script>
 <script>
 // shows the real reason on screen if the viewer cannot start
