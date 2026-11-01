@@ -50,7 +50,6 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
@@ -132,11 +131,11 @@ const draco = new DRACOLoader();
 draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
 const loader = new GLTFLoader();
 loader.setDRACOLoader(draco);
-loader.setMeshoptDecoder(MeshoptDecoder);
+try { loader.setMeshoptDecoder((await import('three/addons/libs/meshopt_decoder.module.js')).MeshoptDecoder); } catch (e) { console.warn('Meshopt decoder not available', e); }
 loader.load(
   MODEL_FILE,
   (gltf) => { setModel(gltf.scene); loadingEl.style.display = 'none'; },
-  (e) => { if (e.total) loadingEl.textContent = 'Loading brain… ' + Math.round((e.loaded / e.total) * 100) + '%'; },
+  (e) => { loadingEl.textContent = 'Loading brain… ' + (e.total ? Math.round((e.loaded / e.total) * 100) + '%' : (e.loaded / 1048576).toFixed(1) + ' MB'); },
   () => { loadingEl.textContent = 'Could not load ' + MODEL_FILE; }
 );
 
@@ -207,6 +206,17 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+<script>
+// shows the real reason on screen if the viewer cannot start
+(function(){
+  var el=document.getElementById('loading');
+  function say(t){ if(el && el.style.display!=='none') el.textContent=t; }
+  var ms=document.querySelectorAll('script[type=module]');
+  ms[ms.length-1].addEventListener('error',function(){ say('A library failed to load. Check your internet connection.'); });
+  window.addEventListener('error',function(e){ say('Error: '+e.message); });
+  window.addEventListener('unhandledrejection',function(e){ say('Error: '+((e.reason&&e.reason.message)||e.reason)); });
+})();
 </script>
 </body>
 </html>
