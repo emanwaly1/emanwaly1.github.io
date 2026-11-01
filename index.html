@@ -69,7 +69,6 @@ h2{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,4vw,2.8rem)
 .panel h3{font-family:var(--display);font-size:1.7rem;margin:18px 0 6px}
 .panel p{color:var(--dim)}
 .tools{margin-top:12px;font-weight:700;font-size:.92rem;color:var(--teal)}
-.js .panel:not([hidden]){animation:fade .3s}
 @keyframes fade{from{opacity:0}}
 @media(prefers-reduced-motion:reduce){.js .panel:not([hidden]){animation:none}}
 @media(max-width:800px){.viewer{grid-template-columns:1fr}.tabs{flex-direction:row;overflow-x:auto;padding-bottom:6px}.tabs button{white-space:nowrap}}
@@ -343,11 +342,17 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   // lazy-load: an iframe with data-src gets its src only when it is visible
   function load(p){
     var f=[].slice.call(p.querySelectorAll('iframe[data-src]')).filter(function(x){return !x.closest('[hidden]')})[0];
-    if(f && !f.getAttribute('src')) f.src=f.dataset.src;
+    if(f && f.getAttribute('src')!==f.dataset.src) f.src=f.dataset.src;
+  }
+  // free the GPU: a 3D viewer that is not on screen is unloaded (reloads fast, files are small)
+  function unload(root){
+    [].slice.call(root.querySelectorAll('iframe[data-src^="threejs-viewer/"]')).forEach(function(f){
+      if(f.getAttribute('src')===f.dataset.src) f.src='about:blank';
+    });
   }
   function show(i,skip){
     current=i;
-    panels.forEach(function(p,n){p.hidden=n!==i});
+    panels.forEach(function(p,n){p.hidden=n!==i; if(n!==i) unload(p);});
     buttons.forEach(function(b,n){b.setAttribute('aria-selected',n===i)});
     if(!skip) load(panels[i]);
   }
@@ -362,7 +367,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
       b.type='button';b.setAttribute('role','tab');b.textContent=v.dataset.label;
       b.setAttribute('aria-selected',n===0);
       b.addEventListener('click',function(){
-        views.forEach(function(x,m){x.hidden=m!==n});
+        views.forEach(function(x,m){x.hidden=m!==n; if(m!==n) unload(x);});
         [].slice.call(bar.children).forEach(function(c,m){c.setAttribute('aria-selected',m===n)});
         load(p);
       });
