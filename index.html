@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Eman Waly| 3D Medical Artist, Animator &amp; Developer</title>
+<title>Eman Waly | 3D Medical Artist, Animator &amp; Developer</title>
 <meta name="description" content="Veterinary doctor, 3D medical artist and animator with a diploma in programming. Anatomy sculpts, disease animations and interactive models.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -74,6 +74,11 @@ h2{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,4vw,2.8rem)
 @media(prefers-reduced-motion:reduce){.js .panel:not([hidden]){animation:none}}
 @media(max-width:800px){.viewer{grid-template-columns:1fr}.tabs{flex-direction:row;overflow-x:auto;padding-bottom:6px}.tabs button{white-space:nowrap}}
 
+.subtabs{display:flex;gap:8px;margin-bottom:14px}
+.subtabs button{font:500 .95rem var(--sans);background:transparent;border:1px solid var(--line);border-radius:999px;padding:7px 18px;color:var(--ink);cursor:pointer}
+.subtabs button:hover{background:var(--bg)}
+.subtabs button[aria-selected="true"]{background:var(--coral);border-color:var(--coral);color:#fff}
+
 /* code section */
 .code{background:#22313a;color:#e8f3ef;border-radius:20px;padding:56px 0}
 .code .wrap{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
@@ -101,7 +106,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
 <script>document.documentElement.className='js'</script>
 
 <header class="bar">
-  <strong>Dr.Eman Waly</strong>
+  <strong>Dr. Eman Waly</strong>
   <nav aria-label="Main"><a href="#work">Work</a><a href="#code">Code</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
 </header>
 
@@ -166,9 +171,36 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
       <div class="tabs" role="tablist" aria-label="Projects"></div>
       <div id="panels">
 
+        <article class="panel" data-title="Brain">
+          <div class="view" data-label="Interactive">
+            <div class="media tall"><iframe data-src="threejs-viewer/brain.html" title="Interactive 3D brain" allowfullscreen></iframe></div>
+          </div>
+          <div class="view" data-label="Video">
+            <div class="media"><div class="ph">Add brain video here (YouTube embed)</div></div>
+          </div>
+          <h3>The brain</h3>
+          <p>Sculpted from a detailed MRI reference as a labeled 360° model with narration.</p>
+          <div class="tools">ZBrush · Blender</div>
+        </article>
+
+        <article class="panel" data-title="Heart">
+          <div class="view" data-label="Interactive">
+            <div class="media tall"><iframe data-src="threejs-viewer/heart.html" title="Interactive 3D heart" allowfullscreen></iframe></div>
+          </div>
+          <div class="view" data-label="Video">
+            <div class="media"><div class="ph">Add heart video here (YouTube embed)</div></div>
+          </div>
+          <h3>The heart</h3>
+          <p>External anatomy and cross section as an interactive 3D model. Switch views, hide parts, or click any part for its name.</p>
+          <div class="tools">ZBrush · Blender</div>
+        </article>
+
         <article class="panel" data-title="Eye cross-section">
-          <div class="media">
-            <iframe src="threejs-viewer/index2.html" title="The eye in cross-section" loading="lazy"></iframe>
+          <div class="view" data-label="Interactive">
+            <div class="media tall"><iframe data-src="threejs-viewer/index2.html" title="The eye in cross-section" allowfullscreen></iframe></div>
+          </div>
+          <div class="view" data-label="Video">
+            <div class="media"><div class="ph">Add eye video here (YouTube embed)</div></div>
           </div>
           <h3>The eye in cross-section</h3>
           <p>A sculpted eye cut open to show its internal structures, lit and rendered for teaching.</p>
@@ -176,7 +208,12 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
         </article>
 
         <article class="panel" data-title="Humerus">
-          <div class="media"><div class="ph">Add humerus model here</div></div>
+          <div class="view" data-label="Interactive">
+            <div class="media"><div class="ph">Add humerus interactive viewer here</div></div>
+          </div>
+          <div class="view" data-label="Video">
+            <div class="media"><div class="ph">Add humerus video here (YouTube embed)</div></div>
+          </div>
           <h3>The humerus</h3>
           <p>A human humerus sculpted from reference images, from the proximal head down to the distal end.</p>
           <div class="tools">ZBrush</div>
@@ -189,14 +226,12 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
           <div class="tools">ZBrush · Blender · Premiere</div>
         </article>
 
-              <article class="panel" data-title="Brain">
-          <div class="media tall">
-            <iframe data-src="threejs-viewer/brain.html" title="Interactive 3D brain" allowfullscreen></iframe>
-          </div>
-          <h3>The brain</h3>
-          <p>Sculpted from a detailed MRI reference as a labeled 360° model with narration.</p>
-          <div class="tools">ZBrush · Blender</div>
-        </article>>
+        <article class="panel" data-title="Blood: sickle cell">
+          <div class="media"><div class="ph">Add blood flow animation here</div></div>
+          <h3>Blood: normal vs sickle cell</h3>
+          <p>Blood cell flow animated in Blender geometry nodes, showing how cell shape narrows the flow.</p>
+          <div class="tools">Blender geometry nodes</div>
+        </article>
 
         <article class="panel" data-title="Artery plaque">
           <div class="media"><div class="ph">Add artery animation here</div></div>
@@ -246,7 +281,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
       <div>
         <span class="tagline">Diploma in programming</span>
         <h2>Art that people can interact with.</h2>
-        <p>My diploma in programming means I’m comfortable reading and modifying code. I use it to make models you can rotate and click, like my interactive heart, instead of leaving them as flat renders.</p>
+        <p>My diploma in programming means I’m comfortable reading and modifying code. I use it to make models you can rotate and click, like my interactive brain, instead of leaving them as flat renders.</p>
       </div>
       <pre aria-label="Illustration of how an interactive model works"><b>// the idea behind my interactive models</b>
 <i>heart</i>.parts.forEach(part =&gt; {
@@ -263,7 +298,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
     <div>
       <h2>About</h2>
       <p>I’m a veterinary doctor with 10 years of drawing experience and a background in motion and animation. I understand the science first, then explain it visually.</p>
-      <p>I’ve worked remotely with international clients, including a complete music video with a well-known nasheed artist and an illustrated children’s story for an Egyptian-British publisher.</p>
+      <p>I’ve worked remotely with international clients, including a complete music video with the well-known nasheed artist Ahmed Al-Nafees and an illustrated children’s story for Hindawi, a well-known Egyptian-British publishing house.</p>
       <p>I’m looking for a full-time remote role in medical illustration and animation.</p>
     </div>
     <ul class="skills">
@@ -299,18 +334,42 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   var tabs=document.querySelector('.tabs'), all=[].slice.call(document.querySelectorAll('.panel'));
   // Groups and their order. Use the exact data-title of each panel.
   var groups=[
-    ['3D anatomy',['Eye cross-section','Humerus','Brain']],
+    ['3D anatomy',['Brain','Heart','Eye cross-section','Humerus']],
     ['Disease mechanisms',['Heart: five conditions','Blood: sickle cell','Artery plaque']],
     ['2D and interactive',['Canine lungs','Vet surgery','Blood cell game','Interactive heart']]
   ];
   var panels=[], buttons=[];
-  function show(i){
-    panels.forEach(function(p,n){p.hidden=n!==i});
-    buttons.forEach(function(b,n){b.setAttribute('aria-selected',n===i)});
-    // lazy-load: iframes with data-src get their src only when their tab opens
-    var f=panels[i].querySelector('iframe[data-src]');
+  var current=0;
+  // lazy-load: an iframe with data-src gets its src only when it is visible
+  function load(p){
+    var f=[].slice.call(p.querySelectorAll('iframe[data-src]')).filter(function(x){return !x.closest('[hidden]')})[0];
     if(f && !f.getAttribute('src')) f.src=f.dataset.src;
   }
+  function show(i,skip){
+    current=i;
+    panels.forEach(function(p,n){p.hidden=n!==i});
+    buttons.forEach(function(b,n){b.setAttribute('aria-selected',n===i)});
+    if(!skip) load(panels[i]);
+  }
+  // Interactive / Video switch inside each panel that has .view blocks
+  all.forEach(function(p){
+    var views=[].slice.call(p.querySelectorAll('.view'));
+    if(!views.length) return;
+    var bar=document.createElement('div');bar.className='subtabs';bar.setAttribute('role','tablist');
+    views.forEach(function(v,n){
+      v.hidden=n!==0;
+      var b=document.createElement('button');
+      b.type='button';b.setAttribute('role','tab');b.textContent=v.dataset.label;
+      b.setAttribute('aria-selected',n===0);
+      b.addEventListener('click',function(){
+        views.forEach(function(x,m){x.hidden=m!==n});
+        [].slice.call(bar.children).forEach(function(c,m){c.setAttribute('aria-selected',m===n)});
+        load(p);
+      });
+      bar.appendChild(b);
+    });
+    p.insertBefore(bar,p.firstChild);
+  });
   groups.forEach(function(g){
     var h=document.createElement('div');h.className='grp';h.textContent=g[0];tabs.appendChild(h);
     g[1].forEach(function(t){
@@ -323,7 +382,12 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
       tabs.appendChild(b);buttons.push(b);
     });
   });
-  show(0);
+  show(0,true);
+  // load the first viewer only when the work section is about to be seen
+  var work=document.getElementById('work');
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(function(e,o){if(e[0].isIntersecting){load(panels[current]);o.disconnect()}},{rootMargin:'300px'}).observe(work);
+  } else load(panels[0]);
 })();
 </script>
 </body>
