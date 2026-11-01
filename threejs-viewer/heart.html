@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heart 3D Viewer</title>
+<style>
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{background:#f1f6f4;color:#22313a;font:500 1rem system-ui,sans-serif;display:flex;flex-direction:column}
+  #viewer{flex:1;min-height:0;position:relative;touch-action:none}
+  #viewer canvas{display:block;width:100%;height:100%}
+  #label{position:absolute;left:16px;bottom:16px;background:#fff;border:1px solid #d3e0dc;border-radius:999px;padding:8px 18px}
+  #hint{position:absolute;right:16px;bottom:16px;color:#5a6b73;font-size:.9rem}
+  #loading{position:absolute;inset:0;display:grid;place-items:center;background:#f1f6f4cc;z-index:5;font-size:1.1rem}
+  #panel{position:absolute;top:12px;left:12px;background:#fffd;border:1px solid #d3e0dc;border-radius:14px;padding:10px 14px;font-size:.9rem;display:flex;flex-direction:column;gap:6px;max-width:220px;max-height:calc(100% - 70px);overflow:auto}
+  #panel label{display:flex;align-items:center;gap:8px;cursor:pointer}
+  #panel .sep{height:1px;background:#d3e0dc;margin:4px 0}
+  #panel input[type=range]{width:100%}
+  #models{display:flex;flex-wrap:wrap;gap:6px}
+  #models button{font:500 .85rem system-ui,sans-serif;background:transparent;border:1px solid #d3e0dc;border-radius:999px;padding:5px 12px;color:#22313a;cursor:pointer}
+  #models button[aria-pressed="true"]{background:#d9566f;border-color:#d9566f;color:#fff}
+</style>
+</head>
+<body>
+<div id="viewer">
+  <div id="loading">Loading…</div>
+  <div id="panel">
+    <div id="models"></div>
+    <div class="sep"></div>
+    <div id="parts"></div>
+    <div class="sep"></div>
+    <label style="flex-direction:column;align-items:stretch">Transparency
+      <input type="range" id="opacity" min="0.1" max="1" step="0.05" value="1">
+    </label>
+  </div>
+  <div id="label">Click a part to see its name</div>
+  <div id="hint">Drag to rotate · Scroll to zoom</div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// ADD MORE MODELS HERE: one line per .glb file (put the file next to this page).
+// Each one gets its own button. Loaded only when its button is clicked.
+const MODELS = [
+  { label: 'External',      file: 'heart.glb' },
+  { label: 'Cross section', file: 'heart-cross-section.glb' }
+  // { label: 'Another view', file: 'heart-another.glb' },
+];
+
+const box = document.getElementById('viewer');
+const label = document.getElementById('label');
+const loadingEl = document.getElementById('loading');
+const modelsEl = document.getElementById('models');
+const partsEl = document.getElementById('parts');
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf1f6f4);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+box.appendChild(renderer.domElement);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0xbfd3cd, 0.8));
+const sun = new THREE.DirectionalLight(0xffffff, 2);
+sun.position.set(3, 5, 4);
+scene.add(sun);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+const draco = new DRACOLoader();
+draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+const loader = new GLTFLoader();
+loader.setDRACOLoader(draco);
+loader.setMeshoptDecoder(MeshoptDecoder);
+
+const cache = {};          // file -> loaded scene
+let current = null;        // currently shown scene
+let framed = false;
+let selected = null;
+
+function frame(obj) {
+  const b = new THREE.Box3().setFromObject(obj);
+  const size = b.getSize(new THREE.Vector3());
+  const center = b.getCenter(new THREE.Vector3());
+  const dist = Math.max(size.x, size.y, size.z) * 1.8;
+  camera.position.set(center.x, center.y, center.z + dist);
+  camera.near = dist / 100;
+  camera.far = dist * 100;
+  camera.updateProjectionMatrix();
+  controls.target.copy(center);
+  controls.update();
+}
+
+function prepare(obj) {
+  obj.traverse((o) => {
+    if (!o.isMesh || !o.material) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    mats.forEach((m) => {
+      m.side = THREE.DoubleSide;
+      if (m.metalness !== undefined && m.metalness > 0.5) m.metalness = 0.2;
+    });
+  });
+}
+
+// one checkbox per group of parts (group = name before the first "_")
+function buildParts(obj) {
+  partsEl.innerHTML = '';
+  const groups = {};
+  obj.traverse((o) => {
+    if (!o.isMesh) return;
+    const key = o.name.split('_')[0] || '(unnamed)';
+    (groups[key] ||= []).push(o);
+  });
+  const keys = Object.keys(groups);
+  if (keys.length < 2) return;
+  keys.forEach((k) => {
+    const l = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = true;
+    cb.addEventListener('change', () => { groups[k].forEach((m) => (m.visible = cb.checked)); clearSelection(); });
+    l.append(cb, k.replace(/([a-z])([A-Z])/g, '$1 $2'));
+    partsEl.appendChild(l);
+  });
+}
+
+function show(file) {
+  if (current) scene.remove(current);
+  clearSelection();
+  current = cache[file];
+  scene.add(current);
+  if (!framed) { frame(current); framed = true; }
+  buildParts(current);
+  document.getElementById('opacity').value = 1;
+  [...modelsEl.children].forEach((b) => b.setAttribute('aria-pressed', b.dataset.file === file));
+}
+
+function select(file) {
+  if (cache[file]) return show(file);
+  loadingEl.style.display = 'grid';
+  loadingEl.textContent = 'Loading… 0%';
+  loader.load(file, (gltf) => {
+    prepare(gltf.scene);
+    cache[file] = gltf.scene;
+    loadingEl.style.display = 'none';
+    show(file);
+  }, (e) => {
+    if (e.total) loadingEl.textContent = 'Loading… ' + Math.round((e.loaded / e.total) * 100) + '%';
+  }, () => {
+    loadingEl.textContent = 'Could not load ' + file;
+    setTimeout(() => { loadingEl.style.display = 'none'; }, 2500);
+  });
+}
+
+MODELS.forEach((m) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = m.label;
+  b.dataset.file = m.file;
+  b.setAttribute('aria-pressed', 'false');
+  b.addEventListener('click', () => select(m.file));
+  modelsEl.appendChild(b);
+});
+select(MODELS[0].file);
+
+document.getElementById('opacity').addEventListener('input', (e) => {
+  if (!current) return;
+  const v = parseFloat(e.target.value);
+  clearSelection();
+  current.traverse((o) => {
+    if (!o.isMesh) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    mats.forEach((mat) => { mat.transparent = v < 1; mat.opacity = v; mat.depthWrite = v >= 1; mat.needsUpdate = true; });
+  });
+});
+
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let down = [0, 0];
+
+function clearSelection() {
+  if (selected) { selected.material = selected.userData.origMat; selected = null; }
+  label.textContent = 'Click a part to see its name';
+}
+
+renderer.domElement.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!current || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const meshes = [];
+  current.traverse((o) => { if (o.isMesh && o.visible) meshes.push(o); });
+  const hit = ray.intersectObjects(meshes, false)[0];
+  clearSelection();
+  if (hit) {
+    selected = hit.object;
+    selected.userData.origMat = selected.material;
+    selected.material = selected.material.clone();
+    selected.material.emissive = new THREE.Color(0xffaa00);
+    selected.material.emissiveIntensity = 0.5;
+    label.textContent = selected.name.replace(/_/g, ' ') || '(unnamed part)';
+  }
+});
+
+function resize() {
+  const w = box.clientWidth, h = box.clientHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>
