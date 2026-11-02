@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Humerus 3D Viewer</title>
+<style>
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{background:#f1f6f4;color:#22313a;font:500 1rem system-ui,sans-serif;display:flex;flex-direction:column}
+  #viewer{flex:1;min-height:0;position:relative;touch-action:none;overflow:hidden}
+  #viewer canvas{display:block;width:100%;height:100%}
+  #loading{position:absolute;inset:0;display:grid;place-items:center;background:#f1f6f4;z-index:9;font-size:1.1rem;text-align:center;padding:20px}
+  #pins{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .pin{position:absolute;left:0;top:0;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#d9566f;color:#fff;border:2px solid #fff;box-shadow:0 1px 5px #0004;font:700 .8rem system-ui,sans-serif;display:grid;place-items:center;cursor:pointer;pointer-events:auto;transition:opacity .15s}
+  .pin.on{background:#22313a;box-shadow:0 0 0 4px #d9566f77}
+  #parts{position:absolute;left:12px;top:12px;background:#fffd;border:1px solid #d3e0dc;border-radius:14px;padding:8px 12px;max-width:230px;max-height:calc(100% - 90px);overflow:auto;z-index:3;font-size:.92rem}
+  #parts summary{cursor:pointer;font-weight:700}
+  #list{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+  .item{font:500 .9rem system-ui,sans-serif;text-align:left;background:transparent;border:0;border-radius:8px;padding:5px 8px;color:#22313a;cursor:pointer}
+  .item:hover{background:#eef4f2}
+  .item.on{background:#d9566f;color:#fff}
+  #label{position:absolute;left:16px;bottom:16px;background:#fff;border:1px solid #d3e0dc;border-radius:16px;padding:8px 18px;max-width:calc(100% - 150px)}
+  #reset{position:absolute;right:16px;bottom:16px;font:500 .92rem system-ui,sans-serif;background:#fffd;border:1px solid #d3e0dc;border-radius:999px;padding:8px 16px;color:#22313a;cursor:pointer}
+  #edit{position:absolute;left:50%;top:12px;transform:translateX(-50%);width:min(520px,calc(100% - 260px));min-width:260px;background:#fff;border:2px solid #d9566f;border-radius:14px;padding:10px 12px;z-index:4;font-size:.85rem}
+  #edit textarea{width:100%;height:96px;margin-top:6px;font:12px ui-monospace,Consolas,monospace}
+  #edit button{font:500 .85rem system-ui,sans-serif;border:1px solid #d3e0dc;background:#fff;border-radius:999px;padding:4px 12px;cursor:pointer;margin-right:4px}
+</style>
+</head>
+<body>
+<div id="viewer">
+  <div id="loading">Loading humerus… 0%</div>
+  <details id="parts" open><summary>Parts</summary><div id="list"></div></details>
+  <div id="pins"></div>
+  <div id="label">Click a numbered point to see its name</div>
+  <button id="reset">Reset view</button>
+</div>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const MODEL_FILE = 'humerus.glb';
+
+// The bone is one piece, so the labels are numbered points placed ON its surface.
+// To add or move points: open this page with ?edit at the end of the address,
+// click on the bone to place each point, then paste the block it gives you here.
+// >>> PARTS START
+const PARTS = [
+];
+// <<< PARTS END
+
+const EDIT = new URLSearchParams(location.search).has('edit');
+const DEFAULT_LABEL = 'Click a numbered point to see its name';
+
+const box = document.getElementById('viewer');
+const label = document.getElementById('label');
+const loadingEl = document.getElementById('loading');
+const pinsEl = document.getElementById('pins');
+const listEl = document.getElementById('list');
+if (innerWidth < 700) document.getElementById('parts').open = false;
+
+// scene
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf1f6f4);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9;
+box.appendChild(renderer.domElement);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0xbfd3cd, 0.8));
+const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+sun.position.set(3, 5, 4);
+scene.add(sun);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.autoRotate = !EDIT && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+controls.autoRotateSpeed = 1.2;
+
+// points
+let parts = PARTS.map((p) => ({ ...p }));
+let pinEls = [], selected = null, baseDist = 5, fly = null;
+const meshes = [];
+const posOf = (p) => new THREE.Vector3(p.x, p.y, p.z);
+const normalOf = (p) => (p.nx === undefined ? posOf(p).normalize() : new THREE.Vector3(p.nx, p.ny, p.nz).normalize());
+
+function select(i) {
+  selected = i;
+  pinEls.forEach((p, n) => p.classList.toggle('on', n === i));
+  [...listEl.querySelectorAll('.item')].forEach((c, n) => c.classList.toggle('on', n === i));
+  const p = parts[i];
+  label.textContent = p ? (i + 1) + '. ' + p.name + (p.note ? ' — ' + p.note : '') : DEFAULT_LABEL;
+}
+
+function flyTo(i) {
+  select(i);
+  const p = parts[i];
+  fly = {
+    t0: performance.now(),
+    fp: camera.position.clone(),
+    tp: posOf(p).add(normalOf(p).multiplyScalar(baseDist * 0.6)),
+    ft: controls.target.clone(),
+    tt: posOf(p)
+  };
+  controls.autoRotate = false;
+}
+
+function exportText() {
+  return 'const PARTS = [\n' + parts.map((p) =>
+    '  { name: ' + JSON.stringify(p.name) + ', note: ' + JSON.stringify(p.note || '') +
+    ', x: ' + p.x + ', y: ' + p.y + ', z: ' + p.z + ', nx: ' + p.nx + ', ny: ' + p.ny + ', nz: ' + p.nz + ' },').join('\n') + '\n];';
+}
+
+function build() {
+  pinsEl.innerHTML = '';
+  listEl.innerHTML = '';
+  pinEls = [];
+  if (!parts.length) listEl.textContent = EDIT ? 'Click on the bone to add the first point.' : 'No labeled points yet.';
+  parts.forEach((p, i) => {
+    const pin = document.createElement('button');
+    pin.className = 'pin';
+    pin.textContent = i + 1;
+    pin.title = p.name;
+    pin.addEventListener('click', () => flyTo(i));
+    pinsEl.appendChild(pin);
+    pinEls.push(pin);
+    const it = document.createElement('button');
+    it.className = 'item';
+    it.textContent = (i + 1) + '. ' + p.name;
+    it.addEventListener('click', () => flyTo(i));
+    listEl.appendChild(it);
+  });
+  select(selected !== null && parts[selected] ? selected : null);
+  if (EDIT) document.getElementById('out').value = exportText();
+}
+
+// edit tools (only with ?edit)
+if (EDIT) {
+  const ed = document.createElement('div');
+  ed.id = 'edit';
+  ed.innerHTML = '<b>Edit mode.</b> Click on the bone to add a point. Type <i>Name</i> or <i>Name | short note</i>.<br>' +
+    '<button id="undo">Undo last</button><button id="clear">Clear all</button><button id="copy">Copy</button>' +
+    '<textarea id="out" readonly></textarea>';
+  box.appendChild(ed);
+  document.getElementById('undo').onclick = () => { parts.pop(); selected = null; build(); };
+  document.getElementById('clear').onclick = () => { if (confirm('Remove all points?')) { parts = []; selected = null; build(); } };
+  document.getElementById('copy').onclick = () => { const o = document.getElementById('out'); o.select(); navigator.clipboard.writeText(o.value).catch(() => document.execCommand('copy')); };
+}
+build();
+
+// load
+const draco = new DRACOLoader();
+draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+const loader = new GLTFLoader();
+loader.setDRACOLoader(draco);
+try { loader.setMeshoptDecoder((await import('three/addons/libs/meshopt_decoder.module.js')).MeshoptDecoder); } catch (e) { console.warn('Meshopt decoder not available', e); }
+
+let home = null;
+loader.load(MODEL_FILE, (gltf) => {
+  const model = gltf.scene;
+  model.traverse((o) => {
+    if (!o.isMesh) return;
+    meshes.push(o);
+    (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => {
+      m.side = THREE.DoubleSide;
+      if (m.metalness !== undefined && m.metalness > 0.5) m.metalness = 0.2;
+    });
+  });
+  // centre the bone so the saved points stay valid
+  const bb = new THREE.Box3().setFromObject(model);
+  const size = bb.getSize(new THREE.Vector3());
+  model.position.sub(bb.getCenter(new THREE.Vector3()));
+  scene.add(model);
+  baseDist = Math.max(size.x, size.y, size.z) * 1.8;
+  camera.position.set(0, 0, baseDist);
+  camera.near = baseDist / 100;
+  camera.far = baseDist * 100;
+  camera.updateProjectionMatrix();
+  controls.target.set(0, 0, 0);
+  controls.update();
+  home = camera.position.clone();
+  loadingEl.style.display = 'none';
+}, (e) => {
+  loadingEl.textContent = 'Loading humerus… ' + (e.total ? Math.round((e.loaded / e.total) * 100) + '%' : (e.loaded / 1048576).toFixed(1) + ' MB');
+}, () => { loadingEl.textContent = 'Could not load ' + MODEL_FILE; });
+
+document.getElementById('reset').addEventListener('click', () => {
+  fly = null;
+  if (home) { camera.position.copy(home); controls.target.set(0, 0, 0); controls.update(); }
+  select(null);
+});
+
+// click on the bone (edit mode: add a point)
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let down = [0, 0];
+renderer.domElement.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; controls.autoRotate = false; fly = null; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+  if (!EDIT) { select(null); return; }
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const hit = ray.intersectObjects(meshes, false)[0];
+  if (!hit) return;
+  const text = prompt('Name this point (optional: Name | short note)');
+  if (!text) return;
+  const [name, note] = text.split('|').map((s) => s.trim());
+  const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+  const f = (v) => +v.toFixed(4);
+  parts.push({ name, note: note || '', x: f(hit.point.x), y: f(hit.point.y), z: f(hit.point.z), nx: f(n.x), ny: f(n.y), nz: f(n.z) });
+  selected = parts.length - 1;
+  build();
+});
+
+function resize() {
+  const w = box.clientWidth, h = box.clientHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+const v = new THREE.Vector3(), toCam = new THREE.Vector3();
+renderer.setAnimationLoop(() => {
+  if (fly) {
+    const k = Math.min(1, (performance.now() - fly.t0) / 700);
+    const e = k * k * (3 - 2 * k);
+    camera.position.lerpVectors(fly.fp, fly.tp, e);
+    controls.target.lerpVectors(fly.ft, fly.tt, e);
+    if (k === 1) fly = null;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+
+  // place each numbered point on screen; fade it when it faces away from the camera
+  const w = box.clientWidth, h = box.clientHeight;
+  parts.forEach((p, i) => {
+    const el = pinEls[i];
+    if (!el) return;
+    v.copy(posOf(p)).project(camera);
+    toCam.copy(camera.position).sub(posOf(p)).normalize();
+    const facing = normalOf(p).dot(toCam);
+    const vis = v.z < 1 ? Math.min(1, Math.max(0, (facing - 0.05) / 0.25)) : 0;
+    el.style.transform = 'translate(' + ((v.x * 0.5 + 0.5) * w) + 'px,' + ((-v.y * 0.5 + 0.5) * h) + 'px)';
+    el.style.opacity = vis;
+    el.style.pointerEvents = vis > 0.5 ? 'auto' : 'none';
+  });
+});
+</script>
+<script>
+// shows the real reason on screen if the viewer cannot start
+(function(){
+  var el=document.getElementById('loading');
+  function say(t){ if(el && el.style.display!=='none') el.textContent=t; }
+  var ms=document.querySelectorAll('script[type=module]');
+  ms[ms.length-1].addEventListener('error',function(){ say('A library failed to load. Check your internet connection.'); });
+  window.addEventListener('error',function(e){ say('Error: '+e.message); });
+  window.addEventListener('unhandledrejection',function(e){ say('Error: '+((e.reason&&e.reason.message)||e.reason)); });
+})();
+</script>
+</body>
+</html>
