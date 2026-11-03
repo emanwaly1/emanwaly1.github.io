@@ -49,7 +49,7 @@ var VIDEO = '../videos/heart-vsd.mp4';
 var T = {
   still: 1.0,    // a frame of the still cross-section picture (step 1 stops here)
   blood: 2.25,   // the blood colours are fully visible (step 2 stops here)
-  mix: 8.7       // the moment where step 3 stops (before the blood mixes)
+  mix: 4.7       // the moment where step 3 stops (before the blood mixes)
 };
 
 // Where the learner has to tap. x and y are fractions of the picture (0 to 1),
@@ -271,10 +271,10 @@ function buildEdit() {
   var copy = el('button', 'tool', 'Copy');
   copy.addEventListener('click', function () { out.select(); navigator.clipboard.writeText(out.value).catch(function () { document.execCommand('copy'); }); });
   var tl = el('input'); tl.type = 'range'; tl.min = 0; tl.max = 1000; tl.value = 0; tl.style.width = '100%';
-  var tr = el('p', '', 'Find a moment: drag, and the time shown is the number to put in T at the top of the file.');
+  var tr = el('p', '', 'Video length: ' + v.duration.toFixed(2) + ' s. Drag to find a moment: the time shown is the number for T at the top of the file.');
   tl.addEventListener('input', function () {
     v.currentTime = (tl.value / 1000) * v.duration;
-    tr.textContent = 'Video time: ' + v.currentTime.toFixed(2) + ' s';
+    tr.textContent = 'Video time: ' + v.currentTime.toFixed(2) + ' s (of ' + v.duration.toFixed(2) + ' s)';
   });
   p.appendChild(tr); p.appendChild(tl);
   p.appendChild(rng); p.appendChild(copy); p.appendChild(out);
