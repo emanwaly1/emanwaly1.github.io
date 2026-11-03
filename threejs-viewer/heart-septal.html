@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ventricular septal defect: lesson</title>
+<style>
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{background:#f1f6f4;color:#22313a;font:500 1rem system-ui,sans-serif;display:flex;flex-direction:column}
+  #viewer{flex:1;min-height:0;position:relative;display:grid;place-items:center;overflow:hidden}
+  #stage{position:relative;background:#000;border-radius:12px;overflow:hidden;touch-action:manipulation}
+  #stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:filter .8s}
+  #stage video.gray{filter:grayscale(1)}
+  .ring{position:absolute;transform:translate(-50%,-50%);aspect-ratio:1;border-radius:50%;border:3px solid #fff;pointer-events:none;display:grid;place-items:center;font:700 .65rem system-ui,sans-serif;color:#fff;text-shadow:0 0 3px #000}
+  .ring.sel{border-color:#ffd166;background:#ffd16633}
+  .ring.good{border-color:#3fc79a;background:#3fc79a33}
+  .ring.bad{border-color:#d9566f;background:#d9566f44}
+  .ring.pulse{border-color:#ffd166;animation:pulse 1s ease-in-out infinite}
+  @keyframes pulse{50%{transform:translate(-50%,-50%) scale(1.25)}}
+  #loading{position:absolute;inset:0;display:grid;place-items:center;background:#f1f6f4;z-index:9;font-size:1.1rem;text-align:center;padding:20px}
+  #panel{flex:none;max-height:44vh;overflow:auto;background:#fff;border-top:1px solid #d3e0dc;padding:12px 16px}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#d3e0dc;margin-right:6px}
+  .dot.on{background:#d9566f}.dot.done{background:#3f8f89}
+  #title{font-size:1.02rem;margin:6px 0 2px}
+  #text{font-size:.95rem;color:#3b4d56}
+  #fb{font-size:.92rem;margin-top:6px}
+  #fb.ok{color:#2f7d62}#fb.bad{color:#c0425b}
+  #acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .act{font:500 .95rem system-ui,sans-serif;background:#d9566f;color:#fff;border:0;border-radius:999px;padding:9px 18px;cursor:pointer}
+  .alt{background:#f1f6f4;color:#22313a;border:1px solid #d3e0dc}
+  #panel textarea{width:100%;height:92px;margin-top:6px;font:12px ui-monospace,Consolas,monospace}
+  #panel .tool{font:500 .85rem system-ui,sans-serif;background:#fff;border:1px solid #d3e0dc;border-radius:999px;padding:5px 12px;cursor:pointer;margin:4px 4px 0 0}
+  #panel .tool[aria-pressed="true"]{background:#d9566f;border-color:#d9566f;color:#fff}
+</style>
+</head>
+<body>
+<div id="viewer">
+  <div id="loading">Loading lesson…</div>
+  <div id="stage"><video id="v" muted playsinline preload="auto"></video></div>
+</div>
+<div id="panel"><div id="steps"></div><h3 id="title"></h3><p id="text"></p><p id="fb"></p><div id="acts"></div></div>
+
+<script>
+// ===== EDIT THIS PART ================================================
+var VIDEO = '../videos/heart-vsd.mp4';
+
+// Moments in the video, in seconds (frame number divided by 29.97).
+var T = {
+  still: 1.0,    // a frame of the still cross-section picture (step 1 stops here)
+  blood: 2.25,   // the blood colours are fully visible (step 2 stops here)
+  mix: 4.7       // just before the mixing starts (step 3 stops here)
+};
+
+// Where the learner has to tap. x and y are fractions of the picture (0 to 1),
+// r is the radius as a fraction of the picture width.
+// Open this page with ?edit at the end of the address to place them by clicking.
+var HOTSPOTS = {
+  defect:         { x: 0.47, y: 0.64, r: 0.07 },
+  leftVentricle:  { x: 0.62, y: 0.66, r: 0.09 },
+  rightVentricle: { x: 0.35, y: 0.63, r: 0.1 }
+};
+
+// Texts (draft: please review the medical content).
+var TEXT = {
+  s1: { title: 'Step 1 of 3 · Find the defect',
+        ask: 'Tap the spot where you think the hole is.',
+        hint: 'Not there. Look for the wall that separates the two ventricles.',
+        reveal: 'It is here: a hole in the wall (the septum) between the two ventricles.',
+        ok: 'Yes. This hole in the wall between the two ventricles is the defect.' },
+  s2: { title: 'Step 2 of 3 · Oxygenated or deoxygenated?',
+        ask: 'The colours are gone. Tap a ventricle, then say what kind of blood it holds.',
+        miss: 'Tap inside one of the two ventricles.',
+        okLeft: 'Correct. The left ventricle holds oxygenated blood. It has just come back from the lungs.',
+        okRight: 'Correct. The right ventricle holds deoxygenated blood. It has just come back from the body.',
+        hintLeft: 'Think again. The left ventricle pumps blood that has just come back from the lungs.',
+        hintRight: 'Think again. The right ventricle receives blood that is returning from the body.',
+        reveal: 'Left ventricle: oxygenated blood. Right ventricle: deoxygenated blood.',
+        done: 'The colours are back: red is oxygenated blood and blue is deoxygenated blood.' },
+  s3: { title: 'Step 3 of 3 · Predict',
+        ask: 'Before the blood moves again: what do you expect from this defect?',
+        options: [
+          { text: 'Blood leaks out of the heart', correct: false },
+          { text: 'Blood mixes inside the heart', correct: true }
+        ],
+        hint: 'Not quite. The hole joins the two ventricles inside the heart, so it does not let blood out of the heart.',
+        ok: 'Correct. Blood passes through the hole and mixes inside the heart. Watch it happen.' },
+  end: { title: 'What just happened',
+         text: 'The hole connects the two ventricles. Pressure is higher in the left ventricle, so oxygenated blood is pushed through the hole into the right ventricle, where it mixes with deoxygenated blood. The extra blood then flows on to the lungs, so the lungs and the left side of the heart have to work harder.' }
+};
+var NAME = { leftVentricle: 'left ventricle', rightVentricle: 'right ventricle' };
+// =====================================================================
+
+var $ = function (id) { return document.getElementById(id); };
+var v = $('v'), stage = $('stage'), viewer = $('viewer'), loadingEl = $('loading');
+var EDIT = new URLSearchParams(location.search).has('edit');
+var stageHandler = null, stopAt = null, onStop = null, endMode = false;
+var wrong = 0, solved = {}, selected = null;
+
+function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+
+function say(o) {
+  var s = $('steps'); s.innerHTML = '';
+  for (var i = 1; i <= 3; i++) s.appendChild(el('span', 'dot' + (i < o.step ? ' done' : i === o.step ? ' on' : '')));
+  $('title').textContent = o.title || '';
+  $('text').textContent = o.text || '';
+  $('fb').textContent = o.fb || '';
+  $('fb').className = o.fbClass || '';
+  var a = $('acts'); a.innerHTML = '';
+  (o.acts || []).forEach(function (x) {
+    var b = el('button', 'act' + (x.alt ? ' alt' : ''), x.label);
+    b.addEventListener('click', x.fn);
+    a.appendChild(b);
+  });
+}
+
+function setRing(k, cls) {
+  var h = HOTSPOTS[k], r = stage.querySelector('.ring[data-k="' + k + '"]');
+  if (!r) { r = el('div', 'ring'); r.dataset.k = k; stage.appendChild(r); }
+  r.style.left = h.x * 100 + '%';
+  r.style.top = h.y * 100 + '%';
+  r.style.width = h.r * 200 + '%';
+  r.className = 'ring ' + (cls || '');
+}
+function clearRings() { stage.querySelectorAll('.ring').forEach(function (r) { r.remove(); }); }
+function point(e) { var b = stage.getBoundingClientRect(); return { px: (e.clientX - b.left) / b.width, py: (e.clientY - b.top) / b.height, w: b.width, h: b.height }; }
+function inside(k, p) { var h = HOTSPOTS[k]; return Math.hypot((p.px - h.x) * p.w, (p.py - h.y) * p.h) <= h.r * p.w; }
+stage.addEventListener('pointerup', function (e) { if (stageHandler) stageHandler(point(e)); });
+
+function seekTo(t) {
+  return new Promise(function (res) {
+    if (Math.abs(v.currentTime - t) < 0.02) return res();
+    v.addEventListener('seeked', function () { res(); }, { once: true });
+    v.currentTime = t;
+  });
+}
+function playTo(t, cb) { stopAt = t; onStop = cb; v.play().catch(function () {}); }
+function loop() {
+  if (stopAt !== null && v.currentTime >= stopAt) { var cb = onStop; stopAt = null; onStop = null; v.pause(); if (cb) cb(); }
+  requestAnimationFrame(loop);
+}
+v.addEventListener('ended', function () { if (endMode) { endMode = false; finish(); } });
+
+// ---- step 1: find the defect ----
+function step1() {
+  wrong = 0; stageHandler = null; clearRings(); v.classList.remove('gray');
+  seekTo(T.still).then(function () {
+    var base = { step: 1, title: TEXT.s1.title, text: TEXT.s1.ask };
+    var next = [{ label: 'Next', fn: function () {
+      clearRings();
+      say({ step: 1, title: TEXT.s1.title, text: 'Watch the blood appear.' });
+      playTo(T.blood, step2);
+    } }];
+    say(base);
+    stageHandler = function (p) {
+      if (inside('defect', p)) {
+        stageHandler = null; setRing('defect', 'good');
+        say({ step: 1, title: base.title, text: base.text, fb: TEXT.s1.ok, fbClass: 'ok', acts: next });
+      } else if (++wrong >= 3) {
+        stageHandler = null; setRing('defect', 'pulse');
+        say({ step: 1, title: base.title, text: base.text, fb: TEXT.s1.reveal, fbClass: 'ok', acts: next });
+      } else {
+        say({ step: 1, title: base.title, text: base.text, fb: TEXT.s1.hint, fbClass: 'bad' });
+      }
+    };
+  });
+}
+
+// ---- step 2: oxygenated or deoxygenated ----
+function drawRings() {
+  clearRings();
+  ['leftVentricle', 'rightVentricle'].forEach(function (k) {
+    if (solved[k]) setRing(k, 'good'); else if (k === selected) setRing(k, 'sel');
+  });
+}
+function step2() {
+  wrong = 0; solved = {}; selected = null; clearRings();
+  v.classList.add('gray');
+  var base = { step: 2, title: TEXT.s2.title, text: TEXT.s2.ask };
+  say(base);
+
+  function allDone(revealed, last) {
+    stageHandler = null; selected = null; drawRings();
+    v.classList.remove('gray');
+    say({ step: 2, title: base.title, text: TEXT.s2.done, fb: revealed ? TEXT.s2.reveal : last, fbClass: 'ok',
+      acts: [{ label: 'Continue', fn: function () {
+        clearRings();
+        say({ step: 2, title: base.title, text: 'Watch the blood move.' });
+        playTo(T.mix, step3);
+      } }] });
+  }
+  function answer(k, a) {
+    var right = (k === 'leftVentricle') === (a === 'ox');
+    if (right) {
+      solved[k] = true; selected = null; drawRings();
+      var msg = k === 'leftVentricle' ? TEXT.s2.okLeft : TEXT.s2.okRight;
+      if (solved.leftVentricle && solved.rightVentricle) allDone(false, msg);
+      else say({ step: 2, title: base.title, text: base.text, fb: msg, fbClass: 'ok' });
+    } else if (++wrong >= 3) {
+      solved = { leftVentricle: true, rightVentricle: true };
+      allDone(true);
+    } else {
+      setRing(k, 'bad');
+      choose(k, k === 'leftVentricle' ? TEXT.s2.hintLeft : TEXT.s2.hintRight);
+    }
+  }
+  function choose(k, fb) {
+    say({ step: 2, title: base.title, text: 'Selected: ' + NAME[k] + '. What kind of blood does it hold?', fb: fb || '', fbClass: fb ? 'bad' : '',
+      acts: [{ label: 'Oxygenated', alt: true, fn: function () { answer(k, 'ox'); } },
+             { label: 'Deoxygenated', alt: true, fn: function () { answer(k, 'deox'); } }] });
+  }
+  stageHandler = function (p) {
+    var k = ['leftVentricle', 'rightVentricle'].filter(function (x) { return inside(x, p); })[0];
+    if (!k) { say({ step: 2, title: base.title, text: base.text, fb: TEXT.s2.miss, fbClass: 'bad' }); return; }
+    if (solved[k]) return;
+    selected = k; drawRings(); choose(k);
+  };
+}
+
+// ---- step 3: predict, then watch ----
+function step3() {
+  stageHandler = null;
+  var base = { step: 3, title: TEXT.s3.title, text: TEXT.s3.ask };
+  function show(opts, fb) {
+    say({ step: 3, title: base.title, text: base.text, fb: fb || '', fbClass: fb ? 'bad' : '',
+      acts: opts.map(function (o) {
+        return { label: o.text, alt: true, fn: function () {
+          if (o.correct) {
+            say({ step: 3, title: base.title, text: base.text, fb: TEXT.s3.ok, fbClass: 'ok',
+              acts: [{ label: 'Watch it happen', fn: function () {
+                say({ step: 3, title: base.title, text: 'Watch the blood move through the hole.' });
+                endMode = true; v.play().catch(function () {});
+              } }] });
+          } else show(opts.filter(function (x) { return x !== o; }), TEXT.s3.hint);
+        } };
+      }) });
+  }
+  show(TEXT.s3.options);
+}
+
+function finish() {
+  say({ step: 4, title: TEXT.end.title, text: TEXT.end.text, acts: [{ label: 'Replay lesson', fn: start }] });
+}
+function start() { endMode = false; stopAt = null; v.pause(); step1(); }
+
+// ---- edit mode: place the tap areas by clicking on the picture ----
+function buildEdit() {
+  var keys = ['defect', 'leftVentricle', 'rightVentricle'], cur = 'defect';
+  var frames = { defect: T.still, leftVentricle: T.blood, rightVentricle: T.blood };
+  var p = $('panel'); p.innerHTML = '';
+  p.appendChild(el('p', '', 'Edit mode. Pick an area, then click on the picture to place its centre. Change the size with the slider.'));
+  var row = el('div'); p.appendChild(row);
+  var rng = el('input'); rng.type = 'range'; rng.min = 0.03; rng.max = 0.2; rng.step = 0.005;
+  var out = el('textarea'); out.readOnly = true;
+  function refresh() {
+    clearRings();
+    keys.forEach(function (k) { setRing(k, k === cur ? 'sel' : 'good'); });
+    rng.value = HOTSPOTS[cur].r;
+    out.value = 'var HOTSPOTS = {\n' + keys.map(function (k) {
+      return '  ' + k + ': { x: ' + HOTSPOTS[k].x + ', y: ' + HOTSPOTS[k].y + ', r: ' + HOTSPOTS[k].r + ' }';
+    }).join(',\n') + '\n};';
+    [].forEach.call(row.children, function (b) { b.setAttribute('aria-pressed', b.dataset.k === cur); });
+  }
+  keys.forEach(function (k) {
+    var b = el('button', 'tool', k === 'defect' ? 'Defect' : NAME[k]);
+    b.dataset.k = k;
+    b.addEventListener('click', function () { cur = k; seekTo(frames[k]).then(refresh); refresh(); });
+    row.appendChild(b);
+  });
+  rng.addEventListener('input', function () { HOTSPOTS[cur].r = +rng.value; refresh(); });
+  var copy = el('button', 'tool', 'Copy');
+  copy.addEventListener('click', function () { out.select(); navigator.clipboard.writeText(out.value).catch(function () { document.execCommand('copy'); }); });
+  p.appendChild(rng); p.appendChild(copy); p.appendChild(out);
+  stageHandler = function (pt) { HOTSPOTS[cur].x = +pt.px.toFixed(3); HOTSPOTS[cur].y = +pt.py.toFixed(3); refresh(); };
+  stage.style.cursor = 'crosshair';
+  seekTo(T.still).then(refresh);
+}
+
+// ---- load ----
+function fit() {
+  var vw = v.videoWidth || 4, vh = v.videoHeight || 5;
+  var w = viewer.clientWidth - 16, h = viewer.clientHeight - 16;
+  var s = Math.min(w / vw, h / vh);
+  stage.style.width = Math.floor(vw * s) + 'px';
+  stage.style.height = Math.floor(vh * s) + 'px';
+}
+window.addEventListener('resize', fit);
+v.addEventListener('loadedmetadata', fit);
+v.addEventListener('error', function () { loadingEl.textContent = 'Could not load ' + VIDEO; });
+v.addEventListener('canplay', function () {
+  fit(); loadingEl.style.display = 'none';
+  if (EDIT) buildEdit(); else start();
+  loop();
+}, { once: true });
+v.src = VIDEO;
+</script>
+</body>
+</html>

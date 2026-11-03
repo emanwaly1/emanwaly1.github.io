@@ -194,6 +194,20 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
           <div class="tools">ZBrush · Blender</div>
         </article>
 
+        <article class="panel" data-title="Heart: septal defect">
+          <div class="media tall"><iframe data-src="threejs-viewer/heart-septal.html" title="Ventricular septal defect" allowfullscreen></iframe></div>
+          <h3>Ventricular septal defect</h3>
+          <p>A 3D animation of how blood mixes between the two ventricles through a hole in the septum, as a short lesson: find the defect, tell oxygenated from deoxygenated blood, predict what will happen, then watch it.</p>
+          <div class="tools">Blender</div>
+        </article>
+
+        <article class="panel" data-title="Heart: ischemia">
+          <div class="media tall"><iframe data-src="threejs-viewer/heart-animation.html?m=ischemia" title="Ischemia: plaque and thrombus" allowfullscreen></iframe></div>
+          <h3>Ischemia: plaque and thrombus</h3>
+          <p>A 3D animation of how a plaque and a thrombus block the blood supply and cause ischemia in the heart muscle. Jump between the stages to see what happens at each one.</p>
+          <div class="tools">Blender</div>
+        </article>
+
         <article class="panel" data-title="Eye cross-section">
           <div class="view" data-label="Interactive">
             <div class="media tall"><iframe data-src="threejs-viewer/index2.html" title="The eye in cross-section" allowfullscreen></iframe></div>
@@ -218,25 +232,11 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
           <div class="tools">ZBrush</div>
         </article>
 
-        <article class="panel" data-title="Heart: five conditions">
-          <div class="media"><div class="ph">Add heart animation here</div></div>
-          <h3>The heart: five conditions</h3>
-          <p>External and cross-section sculpt with animated mechanisms, including how blood mixes through a ventricular septal defect, and ischemic cardiomyopathy.</p>
-          <div class="tools">ZBrush · Blender · Premiere</div>
-        </article>
-
-        <article class="panel" data-title="Blood: sickle cell">
-          <div class="media"><div class="ph">Add blood flow animation here</div></div>
+        <article class="panel" data-title="Blood flow">
+          <div class="media tall"><iframe data-src="threejs-viewer/blood.html" title="Healthy versus sickle cell blood flow" allowfullscreen></iframe></div>
           <h3>Blood: normal vs sickle cell</h3>
           <p>Blood cell flow animated in Blender geometry nodes, showing how cell shape narrows the flow.</p>
           <div class="tools">Blender geometry nodes</div>
-        </article>
-
-        <article class="panel" data-title="Artery plaque">
-          <div class="media"><div class="ph">Add artery animation here</div></div>
-          <h3>Artery: plaque and blockage</h3>
-          <p>A sculpted artery showing how plaque builds up and gradually blocks blood flow.</p>
-          <div class="tools">ZBrush · Blender</div>
         </article>
 
         <article class="panel" data-title="Canine lungs">
@@ -251,6 +251,13 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
           <h3>Veterinary surgery, step by step</h3>
           <p>Instructional illustrations of two dog procedures: entropion and cherry eye.</p>
           <div class="tools">2D illustration</div>
+        </article>
+
+        <article class="panel" data-title="Mechanism">
+          <div class="media"><div class="ph">Add the 2D mechanism video here (morphing)</div></div>
+          <h3>Sickle cell: the mechanism</h3>
+          <p>A 2D animation explaining the mechanism behind sickle cell anemia.</p>
+          <div class="tools">2D animation</div>
         </article>
 
         <article class="panel" data-title="Blood cell game">
@@ -333,9 +340,9 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   var tabs=document.querySelector('.tabs'), all=[].slice.call(document.querySelectorAll('.panel'));
   // Groups and their order. Use the exact data-title of each panel.
   var groups=[
-    ['3D anatomy',['Brain','Heart','Eye cross-section','Humerus']],
-    ['Disease mechanisms',['Heart: five conditions','Blood: sickle cell','Artery plaque']],
-    ['2D and interactive',['Canine lungs','Vet surgery','Blood cell game','Interactive heart']]
+    ['3D anatomy and animation',['Brain','Heart','Heart: septal defect','Heart: ischemia','Eye cross-section','Humerus']],
+    ['Sickle cell project',['Blood flow','Mechanism','Blood cell game']],
+    ['2D and interactive',['Canine lungs','Vet surgery','Interactive heart']]
   ];
   var panels=[], buttons=[];
   var current=0;
@@ -352,7 +359,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   }
   function show(i,skip){
     current=i;
-    panels.forEach(function(p,n){p.hidden=n!==i; if(n!==i) unload(p);});
+    panels.forEach(function(p,n){p.hidden=n!==i; if(n!==i){ unload(p); [].forEach.call(p.querySelectorAll('video'),function(v){v.pause()}); }});
     buttons.forEach(function(b,n){b.setAttribute('aria-selected',n===i)});
     if(!skip) load(panels[i]);
   }
