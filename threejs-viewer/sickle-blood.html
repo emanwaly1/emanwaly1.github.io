@@ -47,7 +47,7 @@
     <video id="va" muted playsinline preload="auto"></video>
     <video id="vb" muted playsinline preload="auto"></video>
     <div class="tg" style="left:8px">Normal blood</div>
-    <div class="tg" style="right:8px">Sickle cell anemia</div>
+    <div class="tg" style="right:8px" id="tagB">Sickle cell anemia</div>
     <div id="cut"></div>
   </div>
   <div class="dash" id="dash">
@@ -57,10 +57,7 @@
   </div>
 </div>
 <div id="ctl">
-  View:
-  <button class="tool" id="vSide">Side by side</button>
-  <button class="tool" id="vCurt">Slide to compare</button>
-  Speed:
+  Drag the picture to compare. Flow speeds are schematic (see Sources). Speed:
   <button class="tool" data-r="0.5">0.5×</button>
   <button class="tool" data-r="1">1×</button>
 </div>
@@ -69,8 +66,8 @@
 <script>
 // ===== EDIT THIS PART ================================================
 // Both videos must have the same length, the same camera and the same size.
-var VIDEO_NORMAL = '../videos/blood-normal.mp4';
-var VIDEO_SICKLE = '../videos/blood-sickle.mp4';
+var VIDEO_NORMAL = 'blood-normal.mp4';
+var VIDEO_SICKLE = 'blood-sickle.mp4';
 var FPS = 29.97;
 function sec(frame) { return frame / FPS; }   // Premiere frame number -> seconds
 
@@ -78,48 +75,60 @@ function sec(frame) { return frame / FPS; }   // Premiere frame number -> second
 var T = { cells: sec(90), sickling: sec(240), block: sec(420) };
 
 // Teaching values in percent (simplified: please review). Normal blood stays at 100.
-var ROWS = ['Cell flexibility', 'Blood flow', 'Oxygen delivery'];
+var ROWS = ['Cell flexibility'];
 var SICKLE = [
-  { t: 0,          v: [100, 100, 100] },
-  { t: T.cells,    v: [100, 100, 100] },
-  { t: T.sickling, v: [45, 85, 80] },
-  { t: T.block,    v: [15, 15, 30] },
-  { t: 999,        v: [10, 5, 20] }      // the last row is moved to the end of the video automatically
+  { t: 0,          v: [100] },
+  { t: T.cells,    v: [100] },
+  { t: T.sickling, v: [45] },
+  { t: T.block,    v: [15] },
+  { t: 999,        v: [10] }      // the last row is moved to the end of the video automatically
 ];
 
-var INTRO = { text: 'Same vessel, same camera, two bloods. Normal blood is on the left. Blood with sickle cell anemia is on the right. Before you watch, make a prediction.',
-  options: [
-    { text: 'Both will flow in the same way', correct: false, explain: 'Not quite. The difference is inside the red cells. Watch for it.' },
-    { text: 'The sickle blood will flow less smoothly', correct: true, explain: 'Yes. Let us see exactly why, step by step.' },
-    { text: 'The sickle blood will flow faster', correct: false, explain: 'No. Stiff cells do not flow faster. Watch what they do.' }
-  ] };
-
-var MOMENTS = [
-  { t: T.cells, title: 'Healthy red cells',
-    text: 'Normal red cells are flexible discs, thin in the middle (biconcave). They bend to squeeze through capillaries narrower than themselves, then spring back.',
-    q: { question: 'Why can normal red cells squeeze through the smallest capillaries?',
-      options: [
-        { text: 'They are flexible and bend', correct: true, explain: 'Yes. Flexibility is what lets them reach every tissue.' },
-        { text: 'They are stiff and round', correct: false, explain: 'No. Stiff cells would get stuck. Healthy cells deform easily.' },
-        { text: 'They are always smaller than the capillary', correct: false, explain: 'Not quite. Capillaries can be narrower than the cell, so the cell has to bend.' }
-      ] } },
-  { t: T.sickling, title: 'Oxygen drops, cells change shape',
-    text: 'In sickle cell anemia the hemoglobin is abnormal (HbS). When it gives up its oxygen, HbS molecules stick together into long rigid fibers. They push the cell into a crescent: a sickle.',
-    q: { question: 'What makes the red cell change shape?',
-      options: [
-        { text: 'Abnormal hemoglobin forms rigid fibers when it loses oxygen', correct: true, explain: 'Yes. One changed amino acid in hemoglobin is enough to cause this.' },
-        { text: 'The nucleus of the cell divides', correct: false, explain: 'No. Mature red cells have no nucleus. The problem is the hemoglobin inside.' },
-        { text: 'The cell takes in too much oxygen', correct: false, explain: 'No, the opposite: sickling happens when oxygen is low.' }
-      ] } },
-  { t: T.block, title: 'A traffic jam',
-    text: 'Sickled cells are stiff and sticky. They cannot bend, they stick to the vessel wall and to each other, and they pile up. The vessel is blocked (vaso-occlusion) and the tissue behind it gets no oxygen.',
-    q: { question: 'Why does the vessel get blocked?',
-      options: [
-        { text: 'Stiff, sticky sickled cells jam together', correct: true, explain: 'Yes. This blockage causes the pain crisis and can damage organs.' },
-        { text: 'The vessel wall closes by itself', correct: false, explain: 'No. The vessel is fine. The cells are the problem.' },
-        { text: 'There are too many white cells', correct: false, explain: 'No. It is the shape and stickiness of the red cells.' }
-      ] } }
+// Playback speed of the SICKLE video relative to the normal one (1 = same speed).
+// Time here is the sickle video's own time. Based on Higgins 2007 (PNAS): flow slows gradually as
+// oxygen falls and cells jam, until it stops; sickle flow is also less steady (Higgins 2007; Embury 1999).
+var SPEED = [
+  { t: 0,          v: 1 },        // oxygenated: flows like normal blood
+  { t: T.sickling, v: 1 },
+  { t: T.block,    v: 0.35 },     // cells stiffen, the flow decays gradually
+  { t: 999,        v: 0.1 }       // jammed: almost stopped (the last row is moved to the end of the video automatically)
 ];
+var UNSTEADY = 0.15;              // how uneven the slowed flow looks (0 = smooth)
+
+var SOURCES = [
+  { t: 'Higgins JM, Eddington DT, Bhatia SN, Mahadevan L. Sickle cell vasoocclusion and rescue in a microfluidic device. PNAS 2007;104(51):20496-20500.',
+    u: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC2154459',
+    n: 'Red cell velocity falls gradually as oxygen drops and cells jam, until it vanishes. Recovery after re-oxygenation is faster than the blockage.' },
+  { t: 'Embury SH, Mohandas N, Paszty C, Cooper P, Cheung ATW. In vivo blood flow abnormalities in the transgenic knockout sickle cell mouse. J Clin Invest 1999;103(6):915-920.',
+    u: 'https://www.jci.org/articles/view/5977',
+    n: 'Sludging in all microvessels and slower flow in venules of sickle mice.' },
+  { t: 'Bazzi MS, Valdez JM, Barocas VH, Wood DK. An experimental-computational approach to quantify blood rheology in sickle cell disease. Biophys J 2020;119(11):2307-2315.',
+    u: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC7732763',
+    n: 'Sickle blood flow differs from non-sickle blood flow because red cell mechanics depend on oxygen.' },
+  { t: 'Lindner JR et al. Contrast-enhanced ultrasound detects changes in microvascular blood flow in adults with sickle cell disease. PLoS ONE 2019.',
+    u: 'https://doaj.org/article/8234e52dd95d4e378069350cb83bfcde',
+    n: 'In 32 adults, microvascular blood flow was about 30% lower during a crisis than at steady state.' },
+  { t: 'Coronary flow velocity and flow reserve in sickle cell anemia. Arquivos Brasileiros de Cardiologia (SciELO), abstract.',
+    u: 'https://scielo.br/j/abc/a/MS5Lv5c53kcLBS5r3f3dGrt/abstract/?lang=en',
+    n: 'Nuance: resting flow velocity in a large artery was higher in patients. The slowdown shown here is in small vessels at low oxygen.' }
+];
+
+// Captions that change while the video plays (no stops).
+var CAPTIONS = [
+  { t: 0,          title: 'Same vessel, two bloods', text: 'Normal blood on the left, sickle cell anemia on the right. Drag the line on the picture to compare them.' },
+  { t: T.cells,    title: 'Healthy red cells', text: 'Normal red cells are flexible discs. They bend to squeeze through narrow capillaries, then spring back.' },
+  { t: T.sickling, title: 'Oxygen drops, cells change shape', text: 'The abnormal hemoglobin (HbS) forms rigid fibers and pushes the cell into a crescent: a sickle.' },
+  { t: T.block,    title: 'A traffic jam', text: 'Sickled cells are stiff and sticky. They pile up and block the vessel, so the tissue behind it gets no oxygen.' }
+];
+
+// The only question: the video pauses here once.
+var ASK = { t: T.sickling,
+  q: { question: 'What makes the red cell change shape?',
+    options: [
+      { text: 'Abnormal hemoglobin forms rigid fibers when it loses oxygen', correct: true, explain: 'Yes. One changed amino acid in hemoglobin is enough.' },
+      { text: 'The nucleus of the cell divides', correct: false, explain: 'No. Mature red cells have no nucleus. The problem is the hemoglobin inside.' },
+      { text: 'The cell takes in too much oxygen', correct: false, explain: 'No, the opposite: sickling happens when oxygen is low.' }
+    ] } };
 
 var LAB = { text: 'Oxygen lab. Lower the oxygen level with the slider and watch the cells. Drag it down to 20% or less.',
   low: 'Normal cells stay as they are. The HbS cells sickle. Sickling can reverse when oxygen returns, but each cycle damages the cell.' };
@@ -129,7 +138,7 @@ var END = 'Normal red cells live about 120 days. Sickled cells break down in 10 
 
 var $ = function (id) { return document.getElementById(id); };
 var a = $('va'), b = $('vb'), V = [a, b], stage = $('stage'), viewer = $('viewer'), loadingEl = $('loading'), dash = $('dash');
-var view = 'side', cut = 0.5, drag = false, rate = 1, stopAt = null, onStop = null, phase = '', dashOn = false, barsN = [], barsS = [], vals = [];
+var view = 'curt', cut = 0.5, drag = false, rate = 1, stopAt = null, onStop = null, phase = '', dashOn = false, barsN = [], barsS = [], vals = [];
 
 function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
 function say(o) {
@@ -155,7 +164,16 @@ function seekTo(t) {
     });
   }));
 }
-function play() { V.forEach(function (x) { x.playbackRate = rate; x.play().catch(function () {}); }); }
+function speedAt(t) {
+  var p = SPEED[0];
+  for (var i = 1; i < SPEED.length; i++) {
+    var q = SPEED[i];
+    if (t <= q.t) { var k = Math.max(0, Math.min(1, (t - p.t) / ((q.t - p.t) || 1))); k = k * k * (3 - 2 * k); return p.v + (q.v - p.v) * k; }
+    p = q;
+  }
+  return p.v;
+}
+function play() { a.playbackRate = rate; b.playbackRate = Math.max(0.0625, rate * speedAt(b.currentTime)); V.forEach(function (x) { x.play().catch(function () {}); }); }
 function pause() { V.forEach(function (x) { x.pause(); }); }
 function playTo(t, cb) { stopAt = t; onStop = cb; play(); }
 
@@ -167,18 +185,15 @@ function layout() {
   b.style.clipPath = s ? 'none' : 'inset(0 0 0 ' + cut * 100 + '%)';
   $('cut').style.display = s ? 'none' : 'block';
   $('cut').style.left = cut * 100 + '%';
-  $('vSide').setAttribute('aria-pressed', s); $('vCurt').setAttribute('aria-pressed', !s);
   fit();
 }
 function slide(e) { var r = stage.getBoundingClientRect(); cut = Math.max(0.02, Math.min(0.98, (e.clientX - r.left) / r.width)); layout(); }
 stage.addEventListener('pointerdown', function (e) { if (view === 'curt') { drag = true; stage.setPointerCapture(e.pointerId); slide(e); } });
 stage.addEventListener('pointermove', function (e) { if (drag) slide(e); });
 stage.addEventListener('pointerup', function () { drag = false; });
-$('vSide').addEventListener('click', function () { view = 'side'; layout(); });
-$('vCurt').addEventListener('click', function () { view = 'curt'; layout(); });
 document.querySelectorAll('[data-r]').forEach(function (btn) {
   btn.addEventListener('click', function () {
-    rate = +btn.dataset.r; V.forEach(function (x) { x.playbackRate = rate; });
+    rate = +btn.dataset.r; a.playbackRate = rate;
     document.querySelectorAll('[data-r]').forEach(function (o) { o.setAttribute('aria-pressed', o === btn); });
   });
 });
@@ -208,7 +223,8 @@ function sickleAt(t) {
   return p.v;
 }
 function updateDash() {
-  var f = sickleAt(a.currentTime);
+  var f = sickleAt(b.currentTime);
+  $('tagB').textContent = 'Sickle cell anemia \u00b7 flow ' + Math.round(speedAt(b.currentTime) * 100) + '%';
   f.forEach(function (x, i) { vals[i].textContent = Math.round(x) + '%'; barsS[i].style.width = x + '%'; });
 }
 function showDash(on) { dashOn = on; dash.style.display = on ? 'block' : 'none'; fit(); }
@@ -231,13 +247,24 @@ function place() {
 window.addEventListener('resize', place);
 
 // ---- the loop ----
-function loop() {
-  if (stopAt !== null && a.currentTime >= stopAt) { var cb = onStop; stopAt = null; onStop = null; pause(); if (cb) cb(); }
-  if (!a.paused && Math.abs(b.currentTime - a.currentTime) > 0.1) b.currentTime = a.currentTime;   // keep B in step with A
-  if (dashOn) updateDash();
+var lastCap = -1, lastSync = 0, lastDash = 0;
+function loop(now) {
+  if (stopAt !== null && b.currentTime >= stopAt) { var cb = onStop; stopAt = null; onStop = null; pause(); if (cb) cb(); }
+  if (!b.paused) {
+    var f = speedAt(b.currentTime);
+    if (f < 1) f *= 1 + UNSTEADY * Math.sin(now / 350);                 // slowed sickle flow is uneven
+    var r = Math.max(0.0625, rate * f);
+    if (Math.abs(b.playbackRate - r) > 0.02) b.playbackRate = r;
+    if (now - lastSync > 1000) {                                        // keep the two together only while both flow at the same speed
+      lastSync = now;
+      if (speedAt(b.currentTime) >= 0.999 && Math.abs(a.currentTime - b.currentTime) > 0.25) a.currentTime = b.currentTime;
+    }
+  }
+  if (dashOn && now - lastDash > 100) { lastDash = now; updateDash(); }
+  caption();
   requestAnimationFrame(loop);
 }
-a.addEventListener('ended', function () { pause(); if (phase === 'play') lab(); });
+b.addEventListener('ended', function () { pause(); if (phase === 'play') lab(); });
 
 // ---- a question that blocks the lesson until it is answered correctly ----
 function ask(q, onDone) {
@@ -253,20 +280,24 @@ function ask(q, onDone) {
   render(q.options);
 }
 
-// ---- the lesson ----
+// ---- the lesson: just watch, one question ----
+function caption() {
+  if (phase !== 'play' && phase !== 'free') return;
+  var t = b.currentTime, n = 0;
+  CAPTIONS.forEach(function (c, k) { if (t >= c.t) n = k; });
+  if (n !== lastCap) { lastCap = n; $('title').textContent = CAPTIONS[n].title; $('text').textContent = CAPTIONS[n].text; }
+}
 function start() {
-  phase = 'predict'; stopAt = null; pause(); showDash(false);
+  phase = 'ready'; stopAt = null; pause(); showDash(true);
   seekTo(0.05).then(function () {
-    ask({ question: INTRO.text, options: INTRO.options }, function () { showDash(true); go(0); });
+    say({ title: CAPTIONS[0].title, text: CAPTIONS[0].text, acts: [{ label: 'Play', fn: go }] });
   });
 }
-function go(i) {
-  phase = 'play';
-  say({ title: 'Watch both sides', text: 'Look at the shape of the cells and how they move.' });
-  if (i >= MOMENTS.length) { play(); return; }   // plays to the end, then the lab starts
-  var m = MOMENTS[i];
-  playTo(m.t, function () {
-    say({ title: m.title, text: m.text, acts: [{ label: 'Check yourself', fn: function () { ask(m.q, function () { go(i + 1); }); } }] });
+function go() {
+  phase = 'play'; lastCap = -1; say({});
+  playTo(ASK.t, function () {
+    phase = 'ask';
+    ask(ASK.q, function () { phase = 'play'; lastCap = -1; say({}); play(); });
   });
 }
 
@@ -311,17 +342,29 @@ function finish() {
   phase = 'end';
   say({ title: 'What you learned', text: END, acts: [
     { label: 'Replay lesson', fn: function () { seekTo(0.05).then(start); } },
-    { label: 'Explore freely', alt: true, fn: free }
+    { label: 'Explore freely', alt: true, fn: free },
+    { label: 'Sources', alt: true, fn: sources }
   ] });
 }
+function sources() {
+  say({ title: 'Sources', text: 'The flow speeds in this lesson are schematic. They follow the pattern reported in these studies, not exact values.',
+    acts: [{ label: 'Back', fn: finish }] });
+  var ul = el('ul'); ul.style.cssText = 'width:100%;padding-left:18px;font-size:.88rem;color:#3b4d56;display:flex;flex-direction:column;gap:8px';
+  SOURCES.forEach(function (r) {
+    var li = el('li'), link = el('a', '', r.t);
+    link.href = r.u; link.target = '_blank'; link.rel = 'noopener'; link.style.color = '#c0425b';
+    li.appendChild(link); li.appendChild(el('div', '', r.n)); ul.appendChild(li);
+  });
+  $('acts').insertBefore(ul, $('acts').firstChild);
+}
 function free() {
-  phase = 'free'; showDash(true);
-  say({ title: 'Explore freely', text: 'Play, drag the time slider, change the view and the speed. Try the slider on the picture too.' });
+  phase = 'free'; lastCap = -1; showDash(true);
+  say({ title: 'Explore freely', text: 'Play, drag the time slider, change the speed, and drag the line to compare.' });
   var sl = el('input'); sl.type = 'range'; sl.min = 0; sl.max = 1000; sl.value = 0; sl.style.width = '100%';
   var pp = el('button', 'act', 'Play / Pause');
-  pp.addEventListener('click', function () { if (a.paused) { if (a.ended) seekTo(0.05); play(); } else pause(); });
-  sl.addEventListener('input', function () { pause(); seekTo((sl.value / 1000) * a.duration); });
-  a.addEventListener('timeupdate', function () { if (phase === 'free' && a.duration) sl.value = a.currentTime / a.duration * 1000; });
+  pp.addEventListener('click', function () { if (b.paused) { if (b.ended) seekTo(0.05); play(); } else pause(); });
+  sl.addEventListener('input', function () { pause(); seekTo((sl.value / 1000) * b.duration); });
+  b.addEventListener('timeupdate', function () { if (phase === 'free' && b.duration) sl.value = b.currentTime / b.duration * 1000; });
   var row = el('div'); row.style.cssText = 'display:flex;flex-direction:column;gap:8px;width:100%'; row.appendChild(sl); row.appendChild(pp);
   $('acts').appendChild(row); seekTo(0.05);
 }
@@ -330,8 +373,8 @@ function free() {
 var ready = 0;
 function rdy() {
   if (++ready < 2) return;
-  SICKLE[SICKLE.length - 1].t = a.duration;
-  buildDash(); place(); layout(); loadingEl.style.display = 'none'; start(); loop();
+  SICKLE[SICKLE.length - 1].t = b.duration; SPEED[SPEED.length - 1].t = b.duration; a.loop = true;
+  buildDash(); place(); layout(); loadingEl.style.display = 'none'; start(); requestAnimationFrame(loop);
 }
 [a, b].forEach(function (x, i) {
   x.addEventListener('canplay', rdy, { once: true });
