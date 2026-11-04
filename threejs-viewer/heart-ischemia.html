@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Ischemia lab (final)</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Ischemia lab (simple)</title>
 <style>
 *{box-sizing:border-box;margin:0}
 html,body{height:100%;overflow:hidden}
 body{background:#05080a;color:#e8f0f2;font:500 1rem system-ui,sans-serif}
 #app{height:100vh;height:100dvh;display:flex}
-#left{position:relative;flex:1;min-width:0;min-height:0;display:grid;place-items:center;touch-action:none;user-select:none}
-#stage{position:relative;background:#000;border-radius:12px;overflow:hidden;box-shadow:0 0 90px #ff4d6d2e}
+#left{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;touch-action:none;user-select:none}
+#vwrap{flex:1;min-height:0;display:grid;place-items:center}
+#stage{position:relative;background:#000;border-radius:12px;overflow:hidden}
 #stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #poly{fill:rgba(255,209,102,.25);stroke:#ffd166;stroke-width:3;vector-effect:non-scaling-stroke;display:none}
@@ -17,78 +18,65 @@ body{background:#05080a;color:#e8f0f2;font:500 1rem system-ui,sans-serif}
 @keyframes glow{50%{fill-opacity:.1}}
 #atag{position:absolute;transform:translate(-50%,-50%);background:#000b;border:1px solid #ffffff40;border-radius:999px;padding:3px 10px;font-size:.75rem;display:none;pointer-events:none;white-space:nowrap}
 .vdot{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#ffd166;border:2px solid #fff;pointer-events:none}
-#cap{position:absolute;left:0;right:0;bottom:0;padding:44px 16px 14px;background:linear-gradient(transparent,#000e);text-align:center;line-height:1.45;font-size:.95rem;transition:opacity .3s;pointer-events:none}
-#track{position:absolute;left:14px;right:14px;top:12px;height:3px;background:#ffffff26;border-radius:3px}
-#tf{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff4d6d,#ffc2cd);box-shadow:0 0 10px #ff4d6d;border-radius:3px}
-#side{width:400px;flex:none;display:flex;flex-direction:column;gap:12px;padding:16px;border-left:1px solid #16252b;background:#070c0f;overflow:auto}
-#steps{display:flex;gap:6px;list-style:none;padding:0}
-#steps li{flex:1;text-align:center;font-size:.7rem;padding:6px 2px;border-radius:8px;background:#ffffff0d;color:#7f949b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#steps li.on{background:#ff4d6d;color:#fff}#steps li.done{color:#39ff88}
+#cap{position:absolute;left:0;right:0;bottom:0;padding:40px 16px 12px;background:linear-gradient(transparent,#000e);text-align:center;line-height:1.45;font-size:.95rem;transition:opacity .3s;pointer-events:none}
+#ctl{display:none;align-items:center;gap:12px;padding:6px 20px 14px}
+#ctl span{color:#9fb3ba;font-size:.85rem;white-space:nowrap}
+#sl{flex:1;height:44px;accent-color:#ff4d6d}
+#side{width:380px;flex:none;display:flex;flex-direction:column;gap:12px;padding:18px;border-left:1px solid #16252b;background:#070c0f;overflow:auto}
+#step{font-size:.8rem;letter-spacing:.08em;color:#ff8da1}
 #dash{display:none;gap:12px;align-items:center;background:#0c1519;border-radius:12px;padding:10px}
-#dash canvas{width:84px;height:auto;border-radius:6px;flex:none}
-.ms{flex:1}.m+.m{margin-top:6px}.m span{display:flex;justify-content:space-between;font-size:.8rem}.m em{font-style:normal}
-.bar2{height:7px;background:#ffffff1f;border-radius:4px;overflow:hidden;margin-top:2px}.bar2 b{display:block;height:100%;width:100%}
-#ctl{display:none;gap:10px;align-items:center}
-#sl{flex:1;height:36px;accent-color:#ff4d6d}
-#hint{display:none;font-size:.85rem;color:#9fb3ba}
-#card{display:none;background:#0c1519;border:1px solid #ff4d6d55;border-radius:14px;padding:14px}
-#card h2{font-size:.9rem;color:#ff8da1;margin-bottom:6px;letter-spacing:.05em}
-#card p{font-size:.95rem;line-height:1.5;margin-bottom:8px}
+#dash canvas{width:80px;height:auto;border-radius:6px;flex:none}
+.ms{flex:1}.m+.m{margin-top:8px}.m span{display:flex;justify-content:space-between;font-size:.85rem}.m em{font-style:normal}
+.bar2{height:8px;background:#ffffff1f;border-radius:4px;overflow:hidden;margin-top:3px}.bar2 b{display:block;height:100%;width:100%}
+#card{display:none}
+#card h2{font-size:1.15rem;margin-bottom:6px}
+#card p{font-size:1rem;line-height:1.5;margin-bottom:10px;color:#c9d6da}
 #cfb:empty{display:none}#card .ok{color:#39ff88}#card .bad{color:#ff8da1}
-#card textarea{width:100%;height:92px;margin-top:6px;font:12px ui-monospace,Consolas,monospace}
-.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
-.b{font:600 .95rem system-ui,sans-serif;background:#ff4d6d;color:#fff;border:1px solid transparent;border-radius:12px;padding:12px 16px;cursor:pointer;text-align:left;min-height:44px}
-.row .b{flex:1 1 100%}
-#ctl .b{flex:none;width:48px;text-align:center;padding:10px 0}
+#card textarea{width:100%;height:92px;font:12px ui-monospace,Consolas,monospace}
+.row{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.b{font:600 1rem system-ui,sans-serif;background:#ff4d6d;color:#fff;border:1px solid transparent;border-radius:12px;padding:13px 16px;cursor:pointer;text-align:left;min-height:48px}
 .b.alt{background:#ffffff14;border-color:#ffffff33}
-.b[aria-pressed="true"]{background:#ff4d6d;border-color:#ff4d6d}
 .b:disabled{opacity:.35;cursor:default}
 #loading{position:fixed;inset:0;display:grid;place-items:center;background:#05080a;z-index:9;text-align:center;padding:20px}
 #mon{display:none;flex-direction:column;gap:10px}
-.mh{display:flex;justify-content:space-between;gap:8px;color:#7fa;font-size:.8rem;letter-spacing:.06em}
-#ecg{width:100%;height:140px;background:#030607;border:1px solid #16252b;border-radius:10px}
-.vit{display:flex;gap:8px}.vit div{flex:1;background:#0c1519;border-radius:10px;padding:8px 10px}
-.vit small{display:block;color:#7f949b;font-size:.7rem}.vit b{font-size:1.3rem;color:#39ff88;font-variant-numeric:tabular-nums}
+#ecg{width:100%;height:120px;background:#030607;border:1px solid #16252b;border-radius:10px}
+#vit{display:flex;justify-content:space-between;font-size:.9rem;color:#9fb3ba}#vit b{color:#39ff88}
 .bar{height:12px;background:#16252b;border-radius:999px;overflow:hidden}.bar i{display:block;height:100%;width:100%;background:#ff4d6d}
-#msg{font-size:.92rem;line-height:1.5;color:#c9d6da;min-height:3em}
+#msg{font-size:.95rem;line-height:1.5;color:#c9d6da}
 #res{font-size:1.6rem;color:#ffd166}
 #src{font-size:.82rem;line-height:1.45;color:#9fb3ba;border-top:1px solid #16252b;padding-top:8px}
 #src summary{cursor:pointer;color:#e8f0f2;font-weight:600;padding:6px 0}
 #src li{margin:6px 0 6px 16px}#src a{color:#7fd6ff}
 @media(max-width:800px){
  #app{flex-direction:column}
- #side{width:100%;flex:none;max-height:46%;border-left:0;border-top:1px solid #16252b;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
- body.er #side{max-height:68%}
- #ecg{height:96px}.vit b{font-size:1.1rem}
- #cap{font-size:.85rem;padding:30px 12px 10px}
+ #side{width:100%;flex:none;max-height:42%;border-left:0;border-top:1px solid #16252b;padding:12px 14px calc(12px + env(safe-area-inset-bottom))}
+ body.er #side{max-height:66%}
+ #ecg{height:84px}#cap{font-size:.85rem;padding:28px 12px 8px}#card h2{font-size:1.05rem}
 }
 </style></head><body>
 <div id="loading">Loading lesson…</div>
 <div id="app">
- <div id="left"><div id="stage"><video id="v" muted playsinline preload="auto"></video>
+ <div id="left"><div id="vwrap"><div id="stage"><video id="v" muted playsinline preload="auto"></video>
   <svg id="ov" viewBox="0 0 1 1" preserveAspectRatio="none"><polygon id="poly" points=""/><polygon id="dead" points=""/></svg>
-  <div id="atag"></div><div id="track"><i id="tf"></i></div><div id="cap"></div></div></div>
+  <div id="atag"></div><div id="cap"></div></div></div>
+  <div id="ctl"><span>◀ back</span><input type="range" id="sl" min="0" max="1000" value="0" aria-label="Travel along the artery"><span>forward ▶</span></div></div>
  <div id="side">
-  <ol id="steps"></ol>
+  <div id="step"></div>
   <div id="dash"><canvas id="thumb"></canvas><div class="ms">
-   <div class="m"><span>Artery open <em id="vOpen">100%</em></span><div class="bar2"><b id="bOpen"></b></div></div>
-   <div class="m"><span>At rest <em id="vRest">100%</em></span><div class="bar2"><b id="bRest"></b></div></div>
-   <div class="m"><span>Running <em id="vRun">100%</em></span><div class="bar2"><b id="bRun"></b></div></div></div></div>
-  <div id="ctl"><button class="b alt" id="bk" aria-label="Back">◀</button><input type="range" id="sl" min="0" max="1000" value="0" aria-label="Move through the video"><button class="b alt" id="fw" aria-label="Forward">▶</button></div>
-  <div id="hint"></div>
+   <div class="m"><span>Blood at rest <em id="vRest">100%</em></span><div class="bar2"><b id="bRest"></b></div></div>
+   <div class="m"><span>Blood when running <em id="vRun">100%</em></span><div class="bar2"><b id="bRun"></b></div></div></div></div>
   <div id="card"></div>
   <div id="mon">
-   <div class="mh"><b>ER · MR. AHMED, 58 · SIMULATED</b><span id="clk">WAITING</span></div>
-   <canvas id="ecg" height="140"></canvas>
-   <div class="vit"><div><small>HEART RATE</small><b id="hr">78</b></div><div><small>BLOOD PRESSURE</small><b id="bp">120/80</b></div><div><small>ST SEGMENT</small><b id="st">normal</b></div></div>
+   <canvas id="ecg" height="120"></canvas>
+   <div id="vit"><span>Heart rate <b id="hr">78</b></span><span>ST segment <b id="st">normal</b></span><span id="clk">WAITING</span></div>
    <div>Muscle alive: <b id="pct">100%</b></div><div class="bar"><i id="fill"></i></div>
    <div id="res"></div><p id="msg"></p><div class="row" id="acts"></div>
    <details id="src"><summary>Medical review &amp; sources</summary><ul>
     <li><b>Aspirin:</b> 162–325 mg, chewed, as early as possible. It stops platelets clumping; it does not open the artery. <a href="https://www.aafp.org/afp/2017/0215/p232" target="_blank" rel="noopener">AAFP review</a> of the <a href="https://doi.org/10.1161/CIR.0b013e3182742c84" target="_blank" rel="noopener">2013 ACCF/AHA STEMI guideline</a>.</li>
-    <li><b>Which treatment:</b> a stent (primary PCI) is preferred if it can be done within 120 min of first medical contact; otherwise give a clot-buster within 30 min of arrival. <a href="https://www.heartfoundation.org.au/for-professionals/acs-guideline?tab=3" target="_blank" rel="noopener">Heart Foundation (Australia) 2025 ACS guideline</a>.</li>
-    <li><b>Clot-busters:</b> restore normal flow (TIMI 3) in only about 50–60% of patients, take about 30–45 min to work, and cause brain bleeding in up to about 1%. <a href="https://he02.tci-thaijo.org/index.php/bkkmedj/article/download/217917/151003" target="_blank" rel="noopener">Bangkok Medical Journal review, 2012</a>.</li>
-    <li><b>How fast muscle dies:</b> in dogs, necrosis starts about 20 min after the blockage and spreads from the inner wall outwards: 38% of the at-risk muscle was dead at 40 min, 57% at 3 h, 71% at 6 h. Humans vary with collateral flow. <a href="https://www.jci.org/references/scholar/30748/B4" target="_blank" rel="noopener">Reimer et al., Circulation 1977</a>.</li>
-    <li><b>Simulated:</b> the blood-supply meters, heart rate, blood pressure and ECG are illustrations, not patient data. For teaching only. Check the latest ACC/AHA guideline before clinical use.</li></ul></details>
+    <li><b>Which treatment:</b> a stent is preferred if it can be done within 120 min of first medical contact; otherwise give a clot-buster within 30 min of arrival. <a href="https://www.heartfoundation.org.au/for-professionals/acs-guideline?tab=3" target="_blank" rel="noopener">Heart Foundation (Australia) 2025</a>.</li>
+    <li><b>Clot-busters:</b> restore normal flow in only about 50–60% of patients, need about 30–45 min, and cause brain bleeding in up to about 1%. <a href="https://he02.tci-thaijo.org/index.php/bkkmedj/article/download/217917/151003" target="_blank" rel="noopener">Bangkok Med J, 2012</a>.</li>
+    <li><b>How fast muscle dies:</b> in dogs, 38% of the at-risk muscle was dead at 40 min, 57% at 3 h, 71% at 6 h. Humans vary. <a href="https://www.jci.org/references/scholar/30748/B4" target="_blank" rel="noopener">Reimer et al., 1977</a>.</li>
+    <li><b>Simulated:</b> the blood-supply bars, heart rate and ECG are illustrations. For teaching only. Check the latest ACC/AHA guideline before clinical use.</li></ul></details>
   </div>
  </div>
 </div>
@@ -99,121 +87,93 @@ const T={first:.05,zoom:sec(35),flow:sec(104),plaque:sec(208),thrombus:sec(241),
 // The apical myocardium on the first picture. Open this page with ?edit at the end of the address to draw it.
 const AREA=[[0.52,0.78],[0.62,0.76],[0.68,0.82],[0.60,0.88],[0.52,0.85]];
 // Blood supply over the video, in percent (simplified teaching values: please review). The last row moves to the end of the video.
-const FLOW=[{t:0,open:100,rest:100,run:100},{t:T.plaque,open:100,rest:100,run:100},{t:T.thrombus,open:65,rest:100,run:70},
- {t:T.outside,open:15,rest:40,run:15},{t:T.occlusion,open:5,rest:15,run:0},{t:999,open:0,rest:0,run:0}];
+const FLOW=[{t:0,rest:100,run:100},{t:T.plaque,rest:100,run:100},{t:T.thrombus,rest:100,run:70},{t:T.outside,rest:40,run:15},{t:T.occlusion,rest:15,run:0},{t:999,rest:0,run:0}];
 const CAPS=[[T.first,'This dark muscle at the apex lives off ONE artery. Follow it.'],
- [T.zoom,'The Left Anterior Descending Artery (LAD) feeds the heart muscle with oxygen-rich blood.'],
+ [T.zoom,'The Left Anterior Descending Artery (LAD) feeds the muscle with blood.'],
  [T.flow,'In a healthy artery the channel is wide open.'],
- [T.plaque,'Fatty plaque builds up in the wall and narrows the channel.'],
+ [T.plaque,'Plaque grows and narrows the channel. Watch the bars: at rest the muscle is fine, but when running it gets less.'],
  [T.thrombus,'The plaque cracks and a clot (thrombus) forms on it.'],
  [T.outside,'From outside, the artery can still look almost normal.'],
- [T.occlusion,'The thrombus blocks the LAD completely. No blood reaches the muscle.']];
-const TEXT={
- case:'Mr. Ahmed, 58, a smoker with high cholesterol, arrives at the emergency room with crushing chest pain. To save him, first understand what is happening inside his heart.',
- s1:{title:'STEP 1 · FIND THE AREA',ask:'Find the darker area of heart muscle near the apex (the bottom of the heart) and tap it.',hint:'Not there. Look near the bottom of the heart, at the apex.',reveal:'It is here, near the apex.',ok:'Yes. This is the apical myocardium. It depends on the Left Anterior Descending Artery.'},
- watch:{title:'STEP 2 · FOLLOW THE ARTERY',text:'A healthy artery feeds the muscle. 100% means all the blood it needs. Travel along the artery.'},
- lab:{title:'STEP 3 · GROW THE PLAQUE',text:'Grow the plaque and watch the meters and the colour of the muscle. Then switch between Resting and Running.',
-  rest:'The artery is narrower, but the muscle is still fine at rest. Now press Running.',
-  run:'While running, the muscle gets less blood than it needs. A narrowing can stay silent until the heart works harder.'},
- q2:{question:'The plaque cracks open. What does the body do?',options:[
-  {text:'It forms a blood clot (a thrombus) on the plaque',correct:true,explain:'Yes. A cracked plaque is treated like a wound, and a clot starts to form on it.'},
-  {text:'It dissolves the plaque right away',correct:false,explain:'No. A cracked plaque exposes the wall, and the blood starts to clot on it.'},
-  {text:'Nothing happens',correct:false,explain:'Not quite. The cracked surface triggers clotting.'}]},
- p2:{title:'STEP 4 · THE CLOT GROWS',text:'The clot keeps growing. Travel to the end and watch the meters fall.'},
- tag:'Apical myocardium'};
+ [T.occlusion,'The clot blocks the artery completely. No blood reaches the muscle.']];
+const Q={question:'The plaque cracks open. What does the body do?',options:[
+ {text:'It forms a blood clot (a thrombus) on the plaque',correct:true,explain:'Yes. A cracked plaque is treated like a wound, and a clot starts to form on it.'},
+ {text:'It dissolves the plaque right away',correct:false,explain:'No. A cracked plaque exposes the wall, and the blood starts to clot on it.'},
+ {text:'Nothing happens',correct:false,explain:'Not quite. The cracked surface triggers clotting.'}]};
 // CURVE: [minutes since the blockage, % of the at-risk muscle still alive], from Reimer et al. 1977 (dog data).
 const CURVE=[[0,100],[20,100],[40,62],[180,43],[360,29]];
 const GAME={minPerSec:6,maxMin:360,lytic:{delay:35,keep:.55},pci:{delay:80,keep:1}};
 // ==========================
 const $=i=>document.getElementById(i);
-const v=$('v'),stage=$('stage'),left=$('left'),cap=$('cap'),card=$('card'),poly=$('poly'),dead=$('dead'),atag=$('atag'),sl=$('sl'),thumb=$('thumb'),dash=$('dash');
+const v=$('v'),stage=$('stage'),left=$('left'),vwrap=$('vwrap'),cap=$('cap'),card=$('card'),poly=$('poly'),dead=$('dead'),atag=$('atag'),sl=$('sl'),thumb=$('thumb'),dash=$('dash');
 const EDIT=new URLSearchParams(location.search).has('edit');
 const h=(t,x,c)=>{const e=document.createElement(t);if(c)e.className=c;if(x)e.textContent=x;return e};
 const fmt=m=>{m=Math.round(m);return m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min'};
 const alive=t=>{for(let i=1;i<CURVE.length;i++)if(t<=CURVE[i][0]){const a=CURVE[i-1],b=CURVE[i];return a[1]+(b[1]-a[1])*(t-a[0])/(b[0]-a[0])}return CURVE[CURVE.length-1][1]};
-const STEPS=['Find','Follow','Plaque lab','Clot','ER'];
-STEPS.forEach((s,i)=>$('steps').append(h('li',(i+1)+' · '+s)));
-const setStep=n=>[...$('steps').children].forEach((li,i)=>li.className=i===n?'on':i<n?'done':'');
+const setStep=t=>$('step').textContent=t;
 function show(t,x,acts,fb,cls){card.innerHTML='';card.style.display='block';const f=h('p',fb||'',cls);f.id='cfb';const r=h('div','','row');
  (acts||[]).forEach(a=>{const b=h('button',a.label,'b'+(a.alt?' alt':''));b.onclick=a.fn;r.append(b)});card.append(h('h2',t),h('p',x),f,r);return r}
 const setFb=(t,c)=>{const e=$('cfb');if(e){e.textContent=t;e.className=c||''}};
 // ---- the area ----
 const pts=a=>a.map(p=>p[0]+','+p[1]).join(' ');
 const cen=()=>[AREA.reduce((s,p)=>s+p[0],0)/AREA.length,AREA.reduce((s,p)=>s+p[1],0)/AREA.length];
-function placeTag(t){const c=cen();atag.textContent=t;atag.style.left=c[0]*100+'%';atag.style.top=c[1]*100+'%';atag.style.display='block'}
-function showPoly(c,label){poly.setAttribute('points',pts(AREA));poly.setAttribute('class',c);if(label)placeTag(label)}
+function showPoly(c,label){poly.setAttribute('points',pts(AREA));poly.setAttribute('class',c);if(label){const k=cen();atag.textContent=label;atag.style.left=k[0]*100+'%';atag.style.top=k[1]*100+'%';atag.style.display='block'}}
 function hidePoly(){poly.setAttribute('class','');atag.style.display='none';dead.style.display='none'}
 function setDead(V){const k=Math.sqrt(Math.max(0,1-V/100)),c=cen();dead.setAttribute('points',pts(AREA.map(p=>[c[0]+(p[0]-c[0])*k,c[1]+(p[1]-c[1])*k])))}
 function hitArea(p){let ins=false;for(let i=0,j=AREA.length-1;i<AREA.length;j=i++){const xi=AREA[i][0],yi=AREA[i][1],xj=AREA[j][0],yj=AREA[j][1];
  if(((yi>p.py)!==(yj>p.py))&&(p.px<(xj-xi)*(p.py-yi)/(yj-yi)+xi))ins=!ins}const c=cen();return ins||Math.hypot((p.px-c[0])*p.w,(p.py-c[1])*p.h)<=.06*p.w}
 function point(e){const b=stage.getBoundingClientRect();return{px:(e.clientX-b.left)/b.width,py:(e.clientY-b.top)/b.height,w:b.width,h:b.height}}
 function seekTo(t){return new Promise(r=>{if(Math.abs(v.currentTime-t)<.02)return r();v.addEventListener('seeked',()=>r(),{once:true});v.currentTime=t})}
-// ---- dashboard: the muscle reacts to the blood supply ----
-const snap=document.createElement('canvas');let dashOn=false,rmode='rest';
-function flowAt(t){let a=FLOW[0];for(let i=1;i<FLOW.length;i++){const b=FLOW[i];if(t<=b.t){const k=Math.max(0,Math.min(1,(t-a.t)/((b.t-a.t)||1)));return{open:a.open+(b.open-a.open)*k,rest:a.rest+(b.rest-a.rest)*k,run:a.run+(b.run-a.run)*k}}a=b}return FLOW[FLOW.length-1]}
+// ---- the two blood-supply bars ----
+const snap=document.createElement('canvas');let dashOn=false;
+function flowAt(t){let a=FLOW[0];for(let i=1;i<FLOW.length;i++){const b=FLOW[i];if(t<=b.t){const k=Math.max(0,Math.min(1,(t-a.t)/((b.t-a.t)||1)));return{rest:a.rest+(b.rest-a.rest)*k,run:a.run+(b.run-a.run)*k}}a=b}return FLOW[FLOW.length-1]}
 function colorFor(val,al){const H=val>=50?40+(val-50)/50*100:val/50*40,S=val>=20?75:15+val/20*60,L=val>=20?50:20+val/20*30;return'hsla('+H+','+S+'%,'+L+'%,'+(al===undefined?1:al)+')'}
-function updateDash(){const f=flowAt(v.currentTime);[['Open',f.open],['Rest',f.rest],['Run',f.run]].forEach(r=>{$('v'+r[0]).textContent=Math.round(r[1])+'%';const b=$('b'+r[0]);b.style.width=r[1]+'%';b.style.background=colorFor(r[1])});
+function updateDash(){const f=flowAt(v.currentTime);[['Rest',f.rest],['Run',f.run]].forEach(r=>{$('v'+r[0]).textContent=Math.round(r[1])+'%';const b=$('b'+r[0]);b.style.width=r[1]+'%';b.style.background=colorFor(r[1])});
  const c=thumb.getContext('2d');c.drawImage(snap,0,0,thumb.width,thumb.height);c.beginPath();AREA.forEach((p,i)=>{const X=p[0]*thumb.width,Y=p[1]*thumb.height;i?c.lineTo(X,Y):c.moveTo(X,Y)});c.closePath();
- c.fillStyle=colorFor(rmode==='run'?f.run:f.rest,.6);c.fill();c.lineWidth=2;c.strokeStyle='#fff';c.stroke()}
+ c.fillStyle=colorFor(f.rest,.6);c.fill();c.lineWidth=2;c.strokeStyle='#fff';c.stroke()}
 const showDash=on=>{dashOn=on;dash.style.display=on?'flex':'none'};
-// ---- travel: move through a part of the video by dragging, the slider, buttons, scroll or keys ----
-let TR={on:false,P:0},END=1,capI=-1,hold=0,stageHandler=null,wrong=0,inER=false;
-function travel(a,b,onMove,onEnd,hint){v.pause();TR={on:true,a:a,b:b,P:0,cur:a,onMove:onMove,onEnd:onEnd,fired:false};v.currentTime=a;sl.value=0;
- $('ctl').style.display='flex';$('hint').textContent=hint;$('hint').style.display='block';left.style.cursor='grab'}
-function endTravel(){TR.on=false;$('ctl').style.display='none';$('hint').style.display='none';left.style.cursor=''}
-function move(d){if(!TR.on)return;$('hint').style.display='none';TR.P=Math.min(1,Math.max(0,TR.P+d));if(TR.onMove)TR.onMove(TR.P);
- if(TR.P>=.999&&TR.onEnd&&!TR.fired){TR.fired=true;v.currentTime=TR.b;endTravel();TR.onEnd()}}
-function caption(t){let i=-1;CAPS.forEach((c,n)=>{if(t>=c[0]-.01)i=n});if(i!==capI){capI=i;cap.style.opacity=0;setTimeout(()=>{if(!inER){cap.textContent=CAPS[i]?CAPS[i][1]:'';cap.style.opacity=1}},220)}}
+// ---- the journey: one slider (or drag the video) ----
+let TR={on:false,P:0,cur:0},END=1,LIM=1,asked=false,lock=false,stageHandler=null,wrong=0,inER=false,capI=-1;
+function move(d){if(!TR.on||lock)return;TR.P=Math.min(asked?1:LIM,Math.max(0,TR.P+d));
+ if(!asked&&TR.P>=LIM-1e-4){lock=true;ask()}else if(TR.P>=.999){TR.on=false;$('ctl').style.display='none';v.currentTime=END;finish()}}
+function caption(t){let i=-1;CAPS.forEach((c,n)=>{if(t>=c[0]-.01)i=n});if(i!==capI){capI=i;cap.style.opacity=0;setTimeout(()=>{if(!inER){cap.textContent=CAPS[i]?CAPS[i][1]:'';cap.style.opacity=1}},200)}}
 let lx=0,ly=0,sx=0,sy=0,drag=false;
-left.addEventListener('pointerdown',e=>{drag=true;lx=sx=e.clientX;ly=sy=e.clientY;if(TR.on){left.style.cursor='grabbing';try{left.setPointerCapture(e.pointerId)}catch(x){}}});
+left.addEventListener('pointerdown',e=>{if(e.target===sl)return;drag=true;lx=sx=e.clientX;ly=sy=e.clientY;if(TR.on)try{left.setPointerCapture(e.pointerId)}catch(x){}});
 left.addEventListener('pointermove',e=>{if(!drag||!TR.on)return;move(((e.clientX-lx)+(e.clientY-ly))/Math.max(stage.clientWidth,320));lx=e.clientX;ly=e.clientY});
-left.addEventListener('pointerup',e=>{if(drag&&stageHandler&&Math.hypot(e.clientX-sx,e.clientY-sy)<6)stageHandler(point(e));drag=false;if(TR.on)left.style.cursor='grab'});
+left.addEventListener('pointerup',e=>{if(drag&&stageHandler&&Math.hypot(e.clientX-sx,e.clientY-sy)<6)stageHandler(point(e));drag=false});
 left.addEventListener('pointercancel',()=>drag=false);
-left.addEventListener('wheel',e=>{if(TR.on){e.preventDefault();move(e.deltaY/2500)}},{passive:false});
-addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown')move(.02);if(e.key==='ArrowLeft'||e.key==='ArrowUp')move(-.02)});
 sl.addEventListener('input',()=>move(sl.value/1000-TR.P));
-[['bk',-1],['fw',1]].forEach(([id,d])=>{const b=$(id);b.addEventListener('pointerdown',()=>hold=d);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>hold=0))});
-// ---- the lesson ----
-function ask(q,done){const render=(opts,fb)=>show('QUESTION',q.question,opts.map(o=>({label:o.text,alt:1,fn:()=>{
-  if(o.correct)show('CORRECT',q.question,[{label:'Continue',fn:done}],o.explain,'ok');else render(opts.filter(x=>x!==o),o.explain)}})),fb,'bad');render(q.options)}
-function start(){setStep(0);endTravel();stageHandler=null;hidePoly();showDash(false);
- seekTo(T.first).then(()=>show('THE CASE',TEXT.case,[{label:'Look inside his heart',fn:find}]))}
-function find(){setStep(0);wrong=0;const t=TEXT.s1,next=[{label:'Next',fn:follow}];show(t.title,t.ask);
- stageHandler=p=>{if(hitArea(p)){stageHandler=null;showPoly('good',TEXT.tag);show(t.title,t.ask,next,t.ok,'ok')}
-  else if(++wrong>=3){stageHandler=null;showPoly('pulse',TEXT.tag);show(t.title,t.ask,next,t.reveal,'ok')}else setFb(t.hint,'bad')}}
-function follow(){stageHandler=null;setStep(1);hidePoly();showDash(true);show(TEXT.watch.title,TEXT.watch.text);
- travel(T.first,T.plaque,null,lab,'Drag the video, move the slider, hold ◀ ▶, scroll, or use the arrow keys.')}
-function lab(){setStep(2);rmode='rest';let ranRun=false,reached=false;const L=TEXT.lab;
- const r=show(L.title,L.text,[{label:'Resting',alt:1,fn:()=>setM('rest')},{label:'Running',alt:1,fn:()=>setM('run')},{label:'The plaque cracks',fn:()=>{endTravel();ask(TEXT.q2,clot)}}]);
- const bRest=r.children[0],bRun=r.children[1],crack=r.children[2];bRest.style.flex=bRun.style.flex='1 1 40%';crack.disabled=true;
- function setM(m){rmode=m;bRest.setAttribute('aria-pressed',m==='rest');bRun.setAttribute('aria-pressed',m==='run');check()}
- function check(){if(TR.P>=.9){reached=true;if(rmode==='run'){ranRun=true;setFb(L.run,'ok')}else if(!ranRun)setFb(L.rest,'ok')}crack.disabled=!(reached&&ranRun)}
- travel(T.plaque,T.thrombus-.03,check,null,'Drag the video or the slider to grow the plaque.');setM('rest')}
-function clot(){setStep(3);show(TEXT.p2.title,TEXT.p2.text);travel(T.thrombus-.03,END,null,finish,'Keep travelling to the end of the video.')}
+// ---- the lesson: 1 find the area, 2 follow the artery, 3 be the doctor ----
+function ask(){const render=(opts,fb)=>show('QUESTION',Q.question,opts.map(o=>({label:o.text,alt:1,fn:()=>{
+  if(o.correct)show('CORRECT',Q.question,[{label:'Continue',fn:()=>{asked=true;lock=false;follow()}}],o.explain,'ok');else render(opts.filter(x=>x!==o),o.explain)}})),fb,'bad');render(Q.options)}
+function start(){setStep('1 / 3 · FIND THE AREA');stageHandler=null;hidePoly();showDash(false);$('ctl').style.display='none';wrong=0;
+ seekTo(T.first).then(()=>{const t='Mr. Ahmed has crushing chest pain. Find the darker area of heart muscle near the apex (the bottom of the heart) and tap it.',
+  next=[{label:'Next',fn:journey}];show('Find the area',t);
+  stageHandler=p=>{if(hitArea(p)){stageHandler=null;showPoly('good','Apical myocardium');show('Find the area',t,next,'Yes. This muscle depends on the Left Anterior Descending Artery.','ok')}
+   else if(++wrong>=3){stageHandler=null;showPoly('pulse','Apical myocardium');show('Find the area',t,next,'It is here, near the apex.','ok')}else setFb('Not there. Look near the bottom of the heart.','bad')}})}
+function follow(){show('Follow the artery','Drag the slider below (or drag the video) to travel along the artery. Watch the two bars: they show how much blood the muscle gets.')}
+function journey(){stageHandler=null;setStep('2 / 3 · FOLLOW THE ARTERY');hidePoly();showDash(true);asked=false;lock=false;TR={on:true,P:0,cur:T.first};v.pause();v.currentTime=T.first;sl.value=0;$('ctl').style.display='flex';follow()}
 function finish(){stage.style.transition='filter 1.6s';stage.style.filter='brightness(.2)';
- setTimeout(()=>show('CODE RED','The artery is completely blocked. A patient like this is rolling into the emergency room right now, and now YOU are the doctor.',[{label:'Go to the ER',fn:finale}]),2400)}
-function replay(){inER=false;document.body.classList.remove('er');$('mon').style.display='none';$('track').style.display='';stage.style.transition='';stage.style.filter='';cap.style.opacity=1;start()}
-// ---- the ER monitor: time is muscle ----
+ setTimeout(()=>show('Code red','The artery is completely blocked. Now YOU are the doctor.',[{label:'Go to the ER',fn:finale}]),2000)}
+// ---- the ER: time is muscle ----
 let buf=new Float32Array(300),ph=0,stc=0;const G={};
 const msg=t=>$('msg').textContent=t;
 function acts(list){const a=$('acts');a.innerHTML='';list.forEach(x=>{const b=h('button',x.label,'b alt');b.onclick=x.fn;a.append(b)})}
-function finale(){setStep(4);showDash(false);card.style.display='none';stage.style.filter='';cap.style.opacity=0;$('track').style.display='none';document.body.classList.add('er');$('mon').style.display='flex';inER=true;fit();v.currentTime=T.first;lobby()}
-function lobby(){Object.assign(G,{run:0,t:0,V:100,asp:0,plan:null,rep:0,tgt:100});showPoly('pulse');atag.style.display='none';dead.style.display='block';setDead(100);$('res').textContent='';
- msg('Crushing chest pain. His LAD is blocked, and the dark core will grow as the muscle dies. Give aspirin, then choose ONE way to open the artery. The nearest cath lab is 80 minutes away.');
+function finale(){setStep('3 / 3 · BE THE DOCTOR');showDash(false);card.style.display='none';stage.style.filter='';cap.style.opacity=0;document.body.classList.add('er');$('mon').style.display='flex';inER=true;fit();v.currentTime=T.first;lobby()}
+function lobby(){Object.assign(G,{run:0,t:0,V:100,plan:null,rep:0,tgt:100});showPoly('pulse');atag.style.display='none';dead.style.display='block';setDead(100);$('res').textContent='';
+ msg('Aspirin was given on arrival. The dark core will grow as the muscle dies. Choose ONE way to open the artery. The nearest cath lab is 80 minutes away.');
  acts([{label:'Start the clock',fn:startER}])}
-function startER(){G.run=1;msg('');const A=$('acts');A.innerHTML='';const bt=x=>{const b=h('button',x,'b alt');A.append(b);return b};
- const bA=bt('Give aspirin (162–325 mg, chewed)'),bL=bt('Clot-busting drug (~35 min to work, opens the artery in only about half of patients, bleeding risk)'),bP=bt('Stent in the cath lab (~80 min, opens the artery reliably)');
- bA.onclick=()=>{G.asp=1;bA.disabled=true;msg('Aspirin given. It stops platelets clumping, but it does not open the artery.')};
- bL.onclick=()=>{G.plan={at:G.t+GAME.lytic.delay,keep:GAME.lytic.keep,k:'l'};bL.disabled=bP.disabled=true;msg('The drug is running. It needs about 35 minutes.')};
- bP.onclick=()=>{G.plan={at:G.t+GAME.pci.delay,keep:GAME.pci.keep,k:'p'};bL.disabled=bP.disabled=true;msg('On the way to the cath lab. About 80 minutes.')}}
-function endGame(){G.run=0;const pct=Math.round(G.V);let st=pct>=50?3:pct>=40?2:pct>=25?1:0;if(!G.asp)st=Math.max(0,st-1);
- msg((G.plan?'You saved '+pct+'% of the muscle. The artery opened '+fmt(G.plan.at)+' after the blockage. ':'Nothing opened the artery. After '+fmt(GAME.maxMin)+' only '+pct+'% of the muscle was alive. ')+(G.asp?'Aspirin: given.':'Aspirin: missed. It is part of every STEMI treatment, so you lose a star.')+' Time is muscle. With the cath lab 80 minutes away (under 120), a stent is the better choice; if it was over 120 minutes away, the clot-buster would be preferred.');
- $('res').textContent='★★★'.slice(0,st)+'☆☆☆'.slice(0,3-st);acts([{label:'Try again',fn:lobby},{label:'Replay the lesson',fn:replay}])}
+function startER(){G.run=1;msg('Hurry: every minute, more muscle dies.');
+ const pick=(o,k,t)=>()=>{G.plan={at:G.t+o.delay,keep:o.keep,k:k};msg(t);acts([])};
+ acts([{label:'Stent in the cath lab (about 80 min, opens the artery reliably)',fn:pick(GAME.pci,'p','On the way to the cath lab. About 80 minutes.')},
+  {label:'Clot-busting drug (about 35 min, opens the artery in only about half of patients, bleeding risk)',fn:pick(GAME.lytic,'l','The drug is running. It needs about 35 minutes.')}])}
+function endGame(){G.run=0;const pct=Math.round(G.V),st=pct>=50?3:pct>=40?2:pct>=25?1:0;
+ msg((G.plan?'You saved '+pct+'% of the muscle. The artery opened '+fmt(G.plan.at)+' after the blockage. ':'Nothing opened the artery. After '+fmt(GAME.maxMin)+' only '+pct+'% was alive. ')+'Time is muscle. With the cath lab under 120 minutes away, a stent is the better choice; if it was farther, the clot-buster would be preferred.');
+ $('res').textContent='★★★'.slice(0,st)+'☆☆☆'.slice(0,3-st);acts([{label:'Try again',fn:lobby},{label:'Replay the lesson',fn:()=>location.reload()}])}
 function wave(f,st){const g=(c,w,a)=>a*Math.exp(-Math.pow((f-c)/w,2)),s=x=>1/(1+Math.exp(-x));
  return g(.12,.04,.12)-g(.255,.011,.14)+g(.28,.012,1)-g(.305,.012,.22)+st*s((f-.31)/.012)*(1-s((f-.62)/.03))+g(.62,.06,.28)}
 function er(dt){
  if(G.run){G.t+=dt*GAME.minPerSec;if(!G.rep)G.V=alive(G.t);
-  if(G.plan&&!G.rep&&G.t>=G.plan.at){G.rep=1;G.tgt=G.V*G.plan.keep;poly.setAttribute('class','good');msg(G.plan.k==='p'?'The stent opened the artery. The muscle that was still alive is saved.':'The drug opened the artery, but only partly: clot-busters restore normal flow in only about 50–60% of patients, and some muscle was already dead.')}
+  if(G.plan&&!G.rep&&G.t>=G.plan.at){G.rep=1;G.tgt=G.V*G.plan.keep;poly.setAttribute('class','good');msg(G.plan.k==='p'?'The stent opened the artery. The muscle that was still alive is saved.':'The drug opened the artery, but only partly: it works in only about 50–60% of patients, and some muscle was already dead.')}
   if(G.rep)G.V+=(G.tgt-G.V)*.08;
   if(G.rep&&Math.abs(G.V-G.tgt)<.3){G.V=G.tgt;endGame()}else if(!G.plan&&G.t>=GAME.maxMin)endGame()}
  const hr=Math.round(78+35*Math.sin(Math.PI*(1-G.V/100))),c=$('ecg');stc+=((G.t>0?(G.rep?.08:.5):0)-stc)*.03;
@@ -222,12 +182,11 @@ function er(dt){
  const x=c.getContext('2d'),W=c.width,H=c.height;x.clearRect(0,0,W,H);x.strokeStyle='#0f2a1c';x.lineWidth=1;
  for(let i=0;i<W;i+=30){x.beginPath();x.moveTo(i,0);x.lineTo(i,H);x.stroke()}
  x.beginPath();buf.forEach((y,i)=>i?x.lineTo(i,H*.7-y*H*.5):x.moveTo(i,H*.7-y*H*.5));x.strokeStyle='#39ff88';x.lineWidth=2;x.shadowColor='#39ff88';x.shadowBlur=8;x.stroke();x.shadowBlur=0;
- $('hr').textContent=hr;$('bp').textContent=Math.round(120-45*(1-G.V/100))+'/'+Math.round(80-25*(1-G.V/100));
- $('st').textContent=stc>.25?'ELEVATED':'normal';$('st').style.color=stc>.25?'#ff4d6d':'#39ff88';
+ $('hr').textContent=hr;$('st').textContent=stc>.25?'ELEVATED':'normal';$('st').style.color=stc>.25?'#ff4d6d':'#39ff88';
  $('pct').textContent=Math.round(G.V)+'%';$('fill').style.width=Math.max(0,G.V)+'%';$('clk').textContent=G.t>0?'T+ '+fmt(G.t):'WAITING';setDead(G.V)}
 // ---- edit mode: draw the area by tapping points ----
-function buildEdit(){card.innerHTML='';card.style.display='block';card.append(h('p','Edit mode. Tap around the dark area (the apical myocardium) to place points, one after another around its edge.'));
- const out=h('textarea'),tl=h('input'),tr=h('p','Drag to see any moment of the video. Video length: '+v.duration.toFixed(2)+' s.');out.readOnly=true;tl.type='range';tl.min=0;tl.max=1000;tl.value=0;tl.style.width='100%';
+function buildEdit(){card.innerHTML='';card.style.display='block';card.append(h('p','Edit mode. Tap around the dark area (the apical myocardium) to place points around its edge.'));
+ const out=h('textarea'),tl=h('input'),tr=h('p','Drag to see any moment of the video. Length: '+v.duration.toFixed(2)+' s.');out.readOnly=true;tl.type='range';tl.min=0;tl.max=1000;tl.value=0;tl.style.width='100%';
  tl.addEventListener('input',()=>{v.currentTime=(tl.value/1000)*v.duration;tr.textContent='Video time: '+v.currentTime.toFixed(2)+' s (of '+v.duration.toFixed(2)+' s)'});
  AREA.length=0;
  function refresh(){stage.querySelectorAll('.vdot').forEach(d=>d.remove());AREA.forEach(q=>{const d=h('div','vdot');d.style.left=q[0]*100+'%';d.style.top=q[1]*100+'%';stage.append(d)});
@@ -239,14 +198,14 @@ function buildEdit(){card.innerHTML='';card.style.display='block';card.append(h(
 // ---- loop and load ----
 let last=performance.now();
 function tick(now){const dt=Math.min((now-last)/1000,.1);last=now;
- if(TR.on){if(hold)move(hold*dt*.12);const tt=TR.a+TR.P*(TR.b-TR.a);TR.cur+=(tt-TR.cur)*.25;if(Math.abs(tt-TR.cur)<.002)TR.cur=tt;if(!v.seeking&&Math.abs(v.currentTime-TR.cur)>.012)v.currentTime=TR.cur;sl.value=TR.P*1000}
- if(!inER&&!EDIT){caption(v.currentTime);$('tf').style.width=(v.currentTime/(v.duration||1)*100)+'%'}
+ if(TR.on){const tt=T.first+TR.P*(END-T.first);TR.cur+=(tt-TR.cur)*.25;if(Math.abs(tt-TR.cur)<.002)TR.cur=tt;if(!v.seeking&&Math.abs(v.currentTime-TR.cur)>.012)v.currentTime=TR.cur;sl.value=TR.P*1000}
+ if(!inER&&!EDIT)caption(v.currentTime);
  if(dashOn)updateDash();if(inER)er(dt);requestAnimationFrame(tick)}
-function fit(){const vw=v.videoWidth||4,vh=v.videoHeight||5,w=left.clientWidth-16,hh=left.clientHeight-16,s=Math.min(w/vw,hh/vh);
- stage.style.width=Math.max(1,Math.floor(vw*s))+'px';stage.style.height=Math.max(1,Math.floor(vh*s))+'px';const c=$('ecg');c.width=c.clientWidth||300;c.height=c.clientHeight||140}
-addEventListener('resize',fit);new ResizeObserver(fit).observe(left);
+function fit(){const vw=v.videoWidth||4,vh=v.videoHeight||5,w=vwrap.clientWidth-16,hh=vwrap.clientHeight-16,s=Math.min(w/vw,hh/vh);
+ stage.style.width=Math.max(1,Math.floor(vw*s))+'px';stage.style.height=Math.max(1,Math.floor(vh*s))+'px';const c=$('ecg');c.width=c.clientWidth||300;c.height=c.clientHeight||120}
+addEventListener('resize',fit);new ResizeObserver(fit).observe(vwrap);
 v.addEventListener('error',()=>$('loading').textContent='Could not load '+VIDEO);
-v.addEventListener('canplay',()=>{END=v.duration-.05;FLOW[FLOW.length-1].t=v.duration;snap.width=thumb.width=160;snap.height=thumb.height=Math.round(160*(v.videoHeight||5)/(v.videoWidth||4));
+v.addEventListener('canplay',()=>{END=v.duration-.05;LIM=(T.thrombus-.03-T.first)/(END-T.first);FLOW[FLOW.length-1].t=v.duration;snap.width=thumb.width=160;snap.height=thumb.height=Math.round(160*(v.videoHeight||5)/(v.videoWidth||4));
  fit();$('loading').style.display='none';seekTo(T.first).then(()=>{snap.getContext('2d').drawImage(v,0,0,snap.width,snap.height);if(EDIT)buildEdit();else start();requestAnimationFrame(tick)})},{once:true});
 v.src=VIDEO;
 </script></body></html>
