@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sickle blood lab</title>
+<style>
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{background:#f1f6f4;color:#22313a;font:500 1rem system-ui,sans-serif;display:flex;flex-direction:column}
+  #viewer{flex:1;min-height:0;position:relative;display:flex;justify-content:center;align-items:center;gap:16px;overflow:hidden}
+  #stage{position:relative;background:#000;border-radius:12px;overflow:hidden;touch-action:pan-y;flex:none}
+  #stage video{position:absolute;top:0;height:100%;object-fit:cover;display:block}
+  .tg{position:absolute;top:8px;background:#fffe;border:1px solid #d3e0dc;border-radius:999px;padding:3px 10px;font-size:.78rem;z-index:2;pointer-events:none}
+  #cut{position:absolute;top:0;bottom:0;width:3px;margin-left:-1.5px;background:#fff;z-index:3;display:none;pointer-events:none}
+  #cut::after{content:'\2194';position:absolute;top:50%;left:50%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:#fff;display:grid;place-items:center;color:#22313a}
+  #loading{position:absolute;inset:0;display:grid;place-items:center;background:#f1f6f4;z-index:9;font-size:1.1rem;text-align:center;padding:20px}
+  .dash{display:none;font-size:.8rem;background:#fff;border:1px solid #d3e0dc;border-radius:12px;padding:10px}
+  .dash.side{width:190px;flex:none}
+  .dash.under{margin-bottom:10px}
+  .dash h4{font-size:.8rem;margin-bottom:4px}
+  .lg{display:flex;gap:10px;font-size:.72rem;color:#5a6b73}
+  .lg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+  .m{margin-top:6px}.m span{display:flex;justify-content:space-between}.m em{font-style:normal}
+  .bar{height:6px;background:#8884;border-radius:3px;overflow:hidden;margin-top:3px}
+  .bar b{display:block;height:100%;width:100%}
+  .n b{background:#3fc79a}.s b{background:#d9566f}
+  #ctl{flex:none;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 16px;background:#fff;border-top:1px solid #d3e0dc;font-size:.85rem;color:#5a6b73}
+  .tool{font:500 .85rem system-ui,sans-serif;background:#fff;border:1px solid #d3e0dc;border-radius:999px;padding:5px 12px;cursor:pointer;color:#22313a}
+  .tool[aria-pressed="true"]{background:#22313a;color:#fff;border-color:#22313a}
+  #panel{flex:none;max-height:42vh;overflow:auto;background:#fff;border-top:1px solid #d3e0dc;padding:12px 16px}
+  #title{font-size:1.02rem;margin-bottom:2px}
+  #text{font-size:.95rem;color:#3b4d56}
+  #fb{font-size:.92rem;margin-top:6px}
+  #fb.ok{color:#2f7d62}#fb.bad{color:#c0425b}
+  #acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .act{font:500 .95rem system-ui,sans-serif;background:#d9566f;color:#fff;border:0;border-radius:999px;padding:9px 18px;cursor:pointer}
+  .act:disabled{opacity:.45;cursor:default}
+  .alt{background:#f1f6f4;color:#22313a;border:1px solid #d3e0dc}
+  #cells{width:100%;height:96px;display:block;background:#f1f6f4;border-radius:10px}
+</style>
+</head>
+<body>
+<div id="viewer">
+  <div id="loading">Loading lesson…</div>
+  <div id="stage">
+    <video id="va" muted playsinline preload="auto"></video>
+    <video id="vb" muted playsinline preload="auto"></video>
+    <div class="tg" style="left:8px">Normal blood</div>
+    <div class="tg" style="right:8px">Sickle cell anemia</div>
+    <div id="cut"></div>
+  </div>
+  <div class="dash" id="dash">
+    <h4>Same vessel, two bloods</h4>
+    <div class="lg"><span><i style="background:#3fc79a"></i>Normal</span><span><i style="background:#d9566f"></i>Sickle</span></div>
+    <div id="rows"></div>
+  </div>
+</div>
+<div id="ctl">
+  View:
+  <button class="tool" id="vSide">Side by side</button>
+  <button class="tool" id="vCurt">Slide to compare</button>
+  Speed:
+  <button class="tool" data-r="0.5">0.5×</button>
+  <button class="tool" data-r="1">1×</button>
+</div>
+<div id="panel"><h3 id="title"></h3><p id="text"></p><p id="fb"></p><div id="acts"></div></div>
+
+<script>
+// ===== EDIT THIS PART ================================================
+// Both videos must have the same length, the same camera and the same size.
+var VIDEO_NORMAL = 'blood-normal.mp4';
+var VIDEO_SICKLE = 'blood-sickle.mp4';
+var FPS = 29.97;
+function sec(frame) { return frame / FPS; }   // Premiere frame number -> seconds
+
+// Moments where the lesson pauses (placeholder frames: tune them with the real video).
+var T = { cells: sec(90), sickling: sec(240), block: sec(420) };
+
+// Teaching values in percent (simplified: please review). Normal blood stays at 100.
+var ROWS = ['Cell flexibility'];
+var SICKLE = [
+  { t: 0,          v: [100] },
+  { t: T.cells,    v: [100] },
+  { t: T.sickling, v: [45] },
+  { t: T.block,    v: [15] },
+  { t: 999,        v: [10] }      // the last row is moved to the end of the video automatically
+];
+
+// Captions that change while the video plays (no stops).
+var CAPTIONS = [
+  { t: 0,          title: 'Same vessel, two bloods', text: 'Normal blood on the left, sickle cell anemia on the right. Watch the shape of the cells.' },
+  { t: T.cells,    title: 'Healthy red cells', text: 'Normal red cells are flexible discs. They bend to squeeze through narrow capillaries, then spring back.' },
+  { t: T.sickling, title: 'Oxygen drops, cells change shape', text: 'The abnormal hemoglobin (HbS) forms rigid fibers and pushes the cell into a crescent: a sickle.' },
+  { t: T.block,    title: 'A traffic jam', text: 'Sickled cells are stiff and sticky. They pile up and block the vessel, so the tissue behind it gets no oxygen.' }
+];
+
+// The only question: the video pauses here once.
+var ASK = { t: T.sickling,
+  q: { question: 'What makes the red cell change shape?',
+    options: [
+      { text: 'Abnormal hemoglobin forms rigid fibers when it loses oxygen', correct: true, explain: 'Yes. One changed amino acid in hemoglobin is enough.' },
+      { text: 'The nucleus of the cell divides', correct: false, explain: 'No. Mature red cells have no nucleus. The problem is the hemoglobin inside.' },
+      { text: 'The cell takes in too much oxygen', correct: false, explain: 'No, the opposite: sickling happens when oxygen is low.' }
+    ] } };
+
+var LAB = { text: 'Oxygen lab. Lower the oxygen level with the slider and watch the cells. Drag it down to 20% or less.',
+  low: 'Normal cells stay as they are. The HbS cells sickle. Sickling can reverse when oxygen returns, but each cycle damages the cell.' };
+
+var END = 'Normal red cells live about 120 days. Sickled cells break down in 10 to 20 days, so the body cannot replace them fast enough: that is the anemia. The blockages cause the pain. Low oxygen, dehydration, infection and cold can trigger a crisis.';
+// =====================================================================
+
+var $ = function (id) { return document.getElementById(id); };
+var a = $('va'), b = $('vb'), V = [a, b], stage = $('stage'), viewer = $('viewer'), loadingEl = $('loading'), dash = $('dash');
+var view = 'side', cut = 0.5, drag = false, rate = 1, stopAt = null, onStop = null, phase = '', dashOn = false, barsN = [], barsS = [], vals = [];
+
+function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+function say(o) {
+  $('title').textContent = o.title || '';
+  $('text').textContent = o.text || '';
+  $('fb').textContent = o.fb || '';
+  $('fb').className = o.fbClass || '';
+  var x = $('acts'); x.innerHTML = '';
+  (o.acts || []).forEach(function (d) {
+    var btn = el('button', 'act' + (d.alt ? ' alt' : ''), d.label);
+    btn.addEventListener('click', d.fn);
+    x.appendChild(btn);
+  });
+}
+
+// ---- two videos kept in step ----
+function seekTo(t) {
+  return Promise.all(V.map(function (x) {
+    return new Promise(function (res) {
+      if (Math.abs(x.currentTime - t) < 0.02) return res();
+      x.addEventListener('seeked', function () { res(); }, { once: true });
+      x.currentTime = t;
+    });
+  }));
+}
+function play() { V.forEach(function (x) { x.playbackRate = rate; x.play().catch(function () {}); }); }
+function pause() { V.forEach(function (x) { x.pause(); }); }
+function playTo(t, cb) { stopAt = t; onStop = cb; play(); }
+
+// ---- view: side by side, or one picture with a slider ----
+function layout() {
+  var s = view === 'side';
+  a.style.left = 0; a.style.width = s ? '50%' : '100%';
+  b.style.left = s ? '50%' : 0; b.style.width = s ? '50%' : '100%';
+  b.style.clipPath = s ? 'none' : 'inset(0 0 0 ' + cut * 100 + '%)';
+  $('cut').style.display = s ? 'none' : 'block';
+  $('cut').style.left = cut * 100 + '%';
+  $('vSide').setAttribute('aria-pressed', s); $('vCurt').setAttribute('aria-pressed', !s);
+  fit();
+}
+function slide(e) { var r = stage.getBoundingClientRect(); cut = Math.max(0.02, Math.min(0.98, (e.clientX - r.left) / r.width)); layout(); }
+stage.addEventListener('pointerdown', function (e) { if (view === 'curt') { drag = true; stage.setPointerCapture(e.pointerId); slide(e); } });
+stage.addEventListener('pointermove', function (e) { if (drag) slide(e); });
+stage.addEventListener('pointerup', function () { drag = false; });
+$('vSide').addEventListener('click', function () { view = 'side'; layout(); });
+$('vCurt').addEventListener('click', function () { view = 'curt'; layout(); });
+document.querySelectorAll('[data-r]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    rate = +btn.dataset.r; V.forEach(function (x) { x.playbackRate = rate; });
+    document.querySelectorAll('[data-r]').forEach(function (o) { o.setAttribute('aria-pressed', o === btn); });
+  });
+});
+document.querySelector('[data-r="1"]').setAttribute('aria-pressed', true);
+
+// ---- dashboard ----
+function buildDash() {
+  var box = $('rows'); box.innerHTML = '';
+  ROWS.forEach(function (name) {
+    var m = el('div', 'm'), top = el('span'), val = el('em', '', '100%');
+    top.appendChild(el('span', '', name)); top.appendChild(val); m.appendChild(top);
+    var n = el('div', 'bar n'), s = el('div', 'bar s');
+    n.appendChild(el('b')); s.appendChild(el('b')); m.appendChild(n); m.appendChild(s);
+    box.appendChild(m); vals.push(val); barsS.push(s.firstChild);
+  });
+}
+function sickleAt(t) {
+  var p = SICKLE[0];
+  for (var i = 1; i < SICKLE.length; i++) {
+    var q = SICKLE[i];
+    if (t <= q.t) {
+      var k = Math.max(0, Math.min(1, (t - p.t) / ((q.t - p.t) || 1)));
+      return p.v.map(function (x, j) { return x + (q.v[j] - x) * k; });
+    }
+    p = q;
+  }
+  return p.v;
+}
+function updateDash() {
+  var f = sickleAt(a.currentTime);
+  f.forEach(function (x, i) { vals[i].textContent = Math.round(x) + '%'; barsS[i].style.width = x + '%'; });
+}
+function showDash(on) { dashOn = on; dash.style.display = on ? 'block' : 'none'; fit(); }
+
+// ---- layout and fit ----
+function wide() { return viewer.clientWidth >= 640; }
+function fit() {
+  var vw = a.videoWidth || 4, vh = a.videoHeight || 5, k = view === 'side' ? 2 : 1;
+  var w = viewer.clientWidth - 16 - (wide() && dashOn ? 206 : 0), h = viewer.clientHeight - 16;
+  var s = Math.min(w / (vw * k), h / vh);
+  stage.style.width = Math.floor(vw * k * s) + 'px';
+  stage.style.height = Math.floor(vh * s) + 'px';
+}
+function place() {
+  var w = wide();
+  dash.className = 'dash ' + (w ? 'side' : 'under');
+  if (w) viewer.appendChild(dash); else $('panel').insertBefore(dash, $('title'));
+  fit();
+}
+window.addEventListener('resize', place);
+
+// ---- the loop ----
+var lastCap = -1, lastSync = 0, lastDash = 0;
+function loop(now) {
+  if (stopAt !== null && a.currentTime >= stopAt) { var cb = onStop; stopAt = null; onStop = null; pause(); if (cb) cb(); }
+  if (!a.paused && now - lastSync > 1000) {                       // gentle sync: only if B drifts a lot, at most once a second
+    lastSync = now;
+    if (Math.abs(b.currentTime - a.currentTime) > 0.25) b.currentTime = a.currentTime;
+  }
+  if (dashOn && now - lastDash > 100) { lastDash = now; updateDash(); }   // the meters do not need 60 updates a second
+  caption();
+  requestAnimationFrame(loop);
+}
+a.addEventListener('ended', function () { pause(); if (phase === 'play') lab(); });
+
+// ---- a question that blocks the lesson until it is answered correctly ----
+function ask(q, onDone) {
+  function render(opts, fb) {
+    say({ title: 'Question', text: q.question, fb: fb || '', fbClass: fb ? 'bad' : '',
+      acts: opts.map(function (o) {
+        return { label: o.text, alt: true, fn: function () {
+          if (o.correct) say({ title: 'Question', text: q.question, fb: o.explain, fbClass: 'ok', acts: [{ label: 'Continue', fn: onDone }] });
+          else render(opts.filter(function (x) { return x !== o; }), o.explain);
+        } };
+      }) });
+  }
+  render(q.options);
+}
+
+// ---- the lesson: just watch, one question ----
+function caption() {
+  if (phase !== 'play' && phase !== 'free') return;
+  var t = a.currentTime, n = 0;
+  CAPTIONS.forEach(function (c, k) { if (t >= c.t) n = k; });
+  if (n !== lastCap) { lastCap = n; $('title').textContent = CAPTIONS[n].title; $('text').textContent = CAPTIONS[n].text; }
+}
+function start() {
+  phase = 'ready'; stopAt = null; pause(); showDash(true);
+  seekTo(0.05).then(function () {
+    say({ title: CAPTIONS[0].title, text: CAPTIONS[0].text, acts: [{ label: 'Play', fn: go }] });
+  });
+}
+function go() {
+  phase = 'play'; lastCap = -1; say({});
+  playTo(ASK.t, function () {
+    phase = 'ask';
+    ask(ASK.q, function () { phase = 'play'; lastCap = -1; say({}); play(); });
+  });
+}
+
+// ---- oxygen lab: how many cells sickle at each oxygen level ----
+function sickled(o2) { return 1 / (1 + Math.exp((o2 - 45) / 9)); }   // simplified teaching curve
+function drawCells(cv, o2) {
+  var W = cv.width = cv.clientWidth * 2, H = cv.height = 192, c = cv.getContext('2d'), N = 24, f = sickled(o2);
+  c.clearRect(0, 0, W, H);
+  [0, 1].forEach(function (row) {
+    for (var k = 0; k < N; k++) {
+      var x = (k + 0.5) * W / N, y = H * (row ? 0.74 : 0.28), r = Math.min(W / N * 0.36, 26);
+      var bent = row === 1 && ((k * 7) % N + 0.5) / N < f;
+      c.beginPath();
+      if (bent) { c.arc(x, y + r * 0.5, r * 1.05, Math.PI * 1.15, Math.PI * 1.85); c.arc(x, y + r * 0.95, r * 0.8, Math.PI * 1.8, Math.PI * 1.2, true); c.fillStyle = '#8a2840'; }
+      else { c.ellipse(x, y, r, r, 0, 0, 7); c.fillStyle = '#d9566f'; }
+      c.fill();
+      if (!bent) { c.beginPath(); c.ellipse(x, y, r * 0.42, r * 0.42, 0, 0, 7); c.fillStyle = '#e98a9b'; c.fill(); }
+    }
+  });
+  c.fillStyle = '#5a6b73'; c.font = '20px system-ui'; c.fillText('Normal', 6, 22); c.fillText('Sickle cell anemia', 6, H - 6);
+}
+function lab() {
+  phase = 'lab'; showDash(false);
+  seekTo(T.block).then(function () {
+    say({ title: 'Oxygen lab', text: LAB.text });
+    var box = el('div'); box.style.width = '100%';
+    var cv = el('canvas'); cv.id = 'cells';
+    var sl = el('input'); sl.type = 'range'; sl.min = 5; sl.max = 100; sl.value = 100; sl.style.cssText = 'width:100%;margin-top:6px';
+    var out = el('p', '', 'Oxygen level: 100%. Sickled cells (sickle blood): 0%');
+    var go2 = el('button', 'act', 'Continue'); go2.disabled = true; go2.style.marginTop = '8px';
+    box.appendChild(cv); box.appendChild(sl); box.appendChild(out); box.appendChild(go2);
+    $('acts').appendChild(box);
+    function upd() {
+      var o2 = +sl.value; drawCells(cv, o2);
+      out.textContent = 'Oxygen level: ' + o2 + '%. Sickled cells (sickle blood): ' + Math.round(sickled(o2) * 100) + '%';
+      if (o2 <= 20) { go2.disabled = false; $('fb').textContent = LAB.low; $('fb').className = 'ok'; }
+    }
+    sl.addEventListener('input', upd); go2.addEventListener('click', finish); upd();
+  });
+}
+function finish() {
+  phase = 'end';
+  say({ title: 'What you learned', text: END, acts: [
+    { label: 'Replay lesson', fn: function () { seekTo(0.05).then(start); } },
+    { label: 'Explore freely', alt: true, fn: free }
+  ] });
+}
+function free() {
+  phase = 'free'; lastCap = -1; showDash(true);
+  say({ title: 'Explore freely', text: 'Play, drag the time slider, change the view and the speed.' });
+  var sl = el('input'); sl.type = 'range'; sl.min = 0; sl.max = 1000; sl.value = 0; sl.style.width = '100%';
+  var pp = el('button', 'act', 'Play / Pause');
+  pp.addEventListener('click', function () { if (a.paused) { if (a.ended) seekTo(0.05); play(); } else pause(); });
+  sl.addEventListener('input', function () { pause(); seekTo((sl.value / 1000) * a.duration); });
+  a.addEventListener('timeupdate', function () { if (phase === 'free' && a.duration) sl.value = a.currentTime / a.duration * 1000; });
+  var row = el('div'); row.style.cssText = 'display:flex;flex-direction:column;gap:8px;width:100%'; row.appendChild(sl); row.appendChild(pp);
+  $('acts').appendChild(row); seekTo(0.05);
+}
+
+// ---- load ----
+var ready = 0;
+function rdy() {
+  if (++ready < 2) return;
+  SICKLE[SICKLE.length - 1].t = a.duration;
+  buildDash(); place(); layout(); loadingEl.style.display = 'none'; start(); requestAnimationFrame(loop);
+}
+[a, b].forEach(function (x, i) {
+  x.addEventListener('canplay', rdy, { once: true });
+  x.addEventListener('error', function () { loadingEl.textContent = 'Could not load ' + (i ? VIDEO_SICKLE : VIDEO_NORMAL); });
+});
+a.src = VIDEO_NORMAL; b.src = VIDEO_SICKLE;
+</script>
+</body>
+</html>
