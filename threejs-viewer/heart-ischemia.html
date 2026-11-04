@@ -1,181 +1,388 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Ischemia: journey (v5 - desktop + sources)</title>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ischemia lab</title>
 <style>
-*{box-sizing:border-box;margin:0}
-html,body{height:100%;overflow:hidden}
-body{background:#05080a;color:#e8f0f2;font:500 1rem system-ui,sans-serif}
-#app{height:100vh;height:100dvh;display:flex}
-#left{position:relative;flex:1;min-width:0;min-height:0;display:grid;place-items:center;touch-action:none;cursor:grab;user-select:none}
-#stage{position:relative;background:#000;border-radius:12px;overflow:hidden;box-shadow:0 0 90px #ff4d6d2e}
-#stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-#ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-#poly{fill:rgba(255,77,109,.35);stroke:#ff4d6d;stroke-width:3;vector-effect:non-scaling-stroke;display:none}
-#poly.pulse{display:block;animation:glow 1.1s ease-in-out infinite}
-#poly.good{display:block;fill:rgba(57,255,136,.3);stroke:#39ff88}
-#dead{fill:rgba(15,15,18,.92);display:none}
-@keyframes glow{50%{fill-opacity:.1}}
-#cap{position:absolute;left:0;right:0;bottom:0;padding:44px 16px 14px;background:linear-gradient(transparent,#000e);text-align:center;line-height:1.45;font-size:.95rem;transition:opacity .3s;pointer-events:none}
-#track{position:absolute;left:14px;right:14px;top:12px;height:3px;background:#ffffff26;border-radius:3px}
-#tf{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff4d6d,#ffc2cd);box-shadow:0 0 10px #ff4d6d;border-radius:3px}
-#side{width:400px;flex:none;display:flex;flex-direction:column;gap:12px;padding:16px;border-left:1px solid #16252b;background:#070c0f;overflow:auto}
-#ctl{display:none;gap:10px;align-items:center}
-#sl{flex:1;height:36px;accent-color:#ff4d6d}
-#hint{display:none;font-size:.85rem;color:#9fb3ba}
-#card{display:none;background:#0c1519;border:1px solid #ff4d6d55;border-radius:14px;padding:14px}
-#card h2{font-size:.95rem;color:#ff8da1;margin-bottom:6px;letter-spacing:.05em}
-#card p{font-size:.95rem;line-height:1.5;margin-bottom:8px}
-#card .ok{color:#39ff88}#card .bad{color:#ff8da1}
-.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
-.b{font:600 .95rem system-ui,sans-serif;background:#ff4d6d;color:#fff;border:0;border-radius:12px;padding:12px 16px;cursor:pointer;text-align:left;min-height:44px}
-.row .b{flex:1 1 100%}
-#ctl .b{flex:none;width:48px;text-align:center;padding:10px 0}
-.b.alt{background:#ffffff14;border:1px solid #ffffff33}
-.b:disabled{opacity:.35;cursor:default}
-#loading{position:fixed;inset:0;display:grid;place-items:center;background:#05080a;z-index:9}
-#mon{display:none;flex-direction:column;gap:10px}
-.mh{display:flex;justify-content:space-between;gap:8px;color:#7fa;font-size:.8rem;letter-spacing:.06em}
-#ecg{width:100%;height:140px;background:#030607;border:1px solid #16252b;border-radius:10px}
-.vit{display:flex;gap:8px}.vit div{flex:1;background:#0c1519;border-radius:10px;padding:8px 10px}
-.vit small{display:block;color:#7f949b;font-size:.7rem}.vit b{font-size:1.3rem;color:#39ff88;font-variant-numeric:tabular-nums}
-.bar{height:12px;background:#16252b;border-radius:999px;overflow:hidden}.bar i{display:block;height:100%;width:100%;background:#ff4d6d}
-#msg{font-size:.92rem;line-height:1.5;color:#c9d6da;min-height:3em}
-#res{font-size:1.6rem;color:#ffd166}
-#src{font-size:.82rem;line-height:1.45;color:#9fb3ba;border-top:1px solid #16252b;padding-top:8px}
-#src summary{cursor:pointer;color:#e8f0f2;font-weight:600;padding:6px 0}
-#src li{margin:6px 0 6px 16px}#src a{color:#7fd6ff}
-@media(max-width:800px){
- #app{flex-direction:column}
- #side{width:100%;flex:none;max-height:44%;border-left:0;border-top:1px solid #16252b;padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
- body.er #side{max-height:68%}
- #ecg{height:96px}.vit b{font-size:1.1rem}
- #cap{font-size:.85rem;padding:30px 12px 10px}
-}
-</style></head><body>
-<div id="loading">Loading…</div>
-<div id="app">
- <div id="left"><div id="stage"><video id="v" muted playsinline preload="auto"></video>
-  <svg id="ov" viewBox="0 0 1 1" preserveAspectRatio="none"><polygon id="poly" points=""/><polygon id="dead" points=""/></svg>
-  <div id="track"><i id="tf"></i></div><div id="cap"></div></div></div>
- <div id="side">
-  <div id="ctl"><button class="b alt" id="bk" aria-label="Back">◀</button><input type="range" id="sl" min="0" max="1000" value="0" aria-label="Journey"><button class="b alt" id="fw" aria-label="Forward">▶</button></div>
-  <div id="hint">Drag the video, move the slider, hold ◀ ▶, scroll, or press the arrow keys.</div>
-  <div id="card"></div>
-  <div id="mon">
-   <div class="mh"><b>ER · MR. AHMED, 58 · SIMULATED</b><span id="clk">WAITING</span></div>
-   <canvas id="ecg" height="140"></canvas>
-   <div class="vit"><div><small>HEART RATE</small><b id="hr">78</b></div><div><small>BLOOD PRESSURE</small><b id="bp">120/80</b></div><div><small>ST SEGMENT</small><b id="st">normal</b></div></div>
-   <div>Muscle alive: <b id="pct">100%</b></div><div class="bar"><i id="fill"></i></div>
-   <div id="res"></div><p id="msg"></p><div class="row" id="acts"></div>
-   <details id="src"><summary>Medical review &amp; sources</summary><ul>
-    <li><b>Aspirin:</b> 162–325 mg, chewed, as early as possible. It stops platelets clumping; it does not open the artery. <a href="https://www.aafp.org/afp/2017/0215/p232" target="_blank" rel="noopener">AAFP review</a> of the <a href="https://doi.org/10.1161/CIR.0b013e3182742c84" target="_blank" rel="noopener">2013 ACCF/AHA STEMI guideline</a>.</li>
-    <li><b>Which treatment:</b> a stent (primary PCI) is preferred if it can be done within 120 min of first medical contact; otherwise give a clot-buster within 30 min of arrival. <a href="https://www.heartfoundation.org.au/for-professionals/acs-guideline?tab=3" target="_blank" rel="noopener">Heart Foundation (Australia) 2025 ACS guideline</a>.</li>
-    <li><b>Clot-busters:</b> restore normal flow (TIMI 3) in only about 50–60% of patients, take about 30–45 min to work, and cause brain bleeding in up to about 1%. <a href="https://he02.tci-thaijo.org/index.php/bkkmedj/article/download/217917/151003" target="_blank" rel="noopener">Bangkok Medical Journal review, 2012</a>.</li>
-    <li><b>How fast muscle dies:</b> in dogs, necrosis starts about 20 min after the blockage and spreads from the inner wall outwards: 38% of the at-risk muscle was dead at 40 min, 57% at 3 h, 71% at 6 h. Humans vary with collateral flow. <a href="https://www.jci.org/references/scholar/30748/B4" target="_blank" rel="noopener">Reimer et al., Circulation 1977</a>.</li>
-    <li><b>Simulated:</b> the heart rate, blood pressure and ECG are illustrations, not patient data. For teaching only. Check the latest ACC/AHA guideline before clinical use.</li></ul></details>
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{background:#f1f6f4;color:#22313a;font:500 1rem system-ui,sans-serif;display:flex;flex-direction:column}
+  #viewer{flex:1;min-height:0;position:relative;display:flex;justify-content:center;align-items:center;gap:16px;overflow:hidden}
+  #stage{position:relative;background:#000;border-radius:12px;overflow:hidden;touch-action:manipulation;flex:none}
+  #stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+  #ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  #poly{fill:rgba(255,209,102,.25);stroke:#ffd166;stroke-width:3;vector-effect:non-scaling-stroke;display:none}
+  #poly.good{fill:rgba(63,199,154,.3);stroke:#3fc79a;display:block}
+  #poly.pulse{fill:rgba(217,86,111,.4);stroke:#d9566f;display:block;animation:glow 1.1s ease-in-out infinite}
+  #poly.edit{display:block}
+  @keyframes glow{50%{fill-opacity:.1}}
+  #atag{position:absolute;transform:translate(-50%,-50%);background:#fffe;border:1px solid #d3e0dc;border-radius:999px;padding:3px 10px;font-size:.78rem;display:none;pointer-events:none;white-space:nowrap}
+  .vdot{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#ffd166;border:2px solid #fff;pointer-events:none}
+  #loading{position:absolute;inset:0;display:grid;place-items:center;background:#f1f6f4;z-index:9;font-size:1.1rem;text-align:center;padding:20px}
+  .dash{visibility:hidden;font-size:.8rem}
+  .dash.side{width:190px;flex:none;background:#fff;border:1px solid #d3e0dc;border-radius:12px;padding:10px}
+  .dash.over{position:absolute;left:8px;top:8px;width:34%;background:#000b;color:#fff;border-radius:8px;padding:6px;z-index:3;font-size:.66rem}
+  .dash h4{font-size:.8rem;margin-bottom:6px}
+  .dash canvas{width:100%;height:auto;display:block;border-radius:6px}
+  .m{margin-top:6px}.m span{display:flex;justify-content:space-between}.m em{font-style:normal}
+  .bar{height:6px;background:#8884;border-radius:3px;overflow:hidden;margin-top:2px}
+  .bar b{display:block;height:100%;width:100%;background:#3fc79a}
+  #panel{flex:none;max-height:42vh;overflow:auto;background:#fff;border-top:1px solid #d3e0dc;padding:12px 16px}
+  #title{font-size:1.02rem;margin-bottom:2px}
+  #text{font-size:.95rem;color:#3b4d56}
+  #fb{font-size:.92rem;margin-top:6px}
+  #fb.ok{color:#2f7d62}#fb.bad{color:#c0425b}
+  #acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .act{font:500 .95rem system-ui,sans-serif;background:#d9566f;color:#fff;border:0;border-radius:999px;padding:9px 18px;cursor:pointer}
+  .act:disabled{opacity:.45;cursor:default}
+  .alt{background:#f1f6f4;color:#22313a;border:1px solid #d3e0dc}
+  .act.alt[aria-pressed="true"]{background:#22313a;color:#fff;border-color:#22313a}
+  #panel textarea{width:100%;height:92px;margin-top:6px;font:12px ui-monospace,Consolas,monospace}
+  #panel .tool{font:500 .85rem system-ui,sans-serif;background:#fff;border:1px solid #d3e0dc;border-radius:999px;padding:5px 12px;cursor:pointer;margin:4px 4px 0 0}
+</style>
+</head>
+<body>
+<div id="viewer">
+  <div id="loading">Loading lesson…</div>
+  <div id="stage">
+    <video id="v" muted playsinline preload="auto"></video>
+    <svg id="ov" viewBox="0 0 1 1" preserveAspectRatio="none"><polygon id="poly" points=""/></svg>
+    <div id="atag"></div>
   </div>
- </div>
+  <div class="dash" id="dash">
+    <h4>Blood to the muscle</h4>
+    <canvas id="thumb"></canvas>
+    <div class="m"><span>Artery open <em id="vOpen">100%</em></span><div class="bar"><b id="bOpen"></b></div></div>
+    <div class="m"><span>At rest <em id="vRest">100%</em></span><div class="bar"><b id="bRest"></b></div></div>
+    <div class="m"><span>Running <em id="vRun">100%</em></span><div class="bar"><b id="bRun"></b></div></div>
+  </div>
 </div>
+<div id="panel"><h3 id="title"></h3><p id="text"></p><p id="fb"></p><div id="acts"></div></div>
+
 <script>
-// ===== EDIT THIS PART =====
-const VIDEO='../videos/heart-ischemia.mp4', FPS=29.97, sec=f=>f/FPS;
-const T={first:.05,zoom:sec(35),flow:sec(104),plaque:sec(208),outside:sec(331),occlusion:sec(358)};
-const AREA=[[0.52,0.78],[0.62,0.76],[0.68,0.82],[0.60,0.88],[0.52,0.85]];
-const CAPS=[[T.first,'This dark muscle at the apex lives off ONE artery. Follow it.'],
- [T.zoom,'The Left Anterior Descending Artery (LAD) feeds the heart muscle with oxygen-rich blood.'],
- [T.flow,'In a healthy artery the channel is wide open.'],
- [T.plaque,'Fatty plaque builds up in the wall and narrows the channel. A damaged plaque forms a clot (thrombus).'],
- [T.outside,'From outside, the artery can still look almost normal.'],
- [T.occlusion,'The thrombus blocks the LAD completely. No blood reaches the muscle.']];
-const STOP=[{t:sec(204),q:{question:'Fatty deposits are about to build up in the artery wall. What will happen to the channel inside?',options:[
- {text:'It becomes narrower',correct:true,explain:'Yes. The plaque grows into the channel, so less blood can pass.'},
- {text:'It becomes wider',correct:false,explain:'No. Plaque takes up space inside the channel.'},
- {text:'It stays the same',correct:false,explain:'Not quite. The plaque keeps growing.'}]}},
- {t:sec(241),q:{question:'A damaged plaque makes the body form a clot on it. What is this clot called?',options:[
- {text:'Thrombus',correct:true,explain:'Yes. A clot that forms and stays where it formed is a thrombus.'},
- {text:'Embolus',correct:false,explain:'An embolus travels through the blood. This clot stays put.'},
- {text:'Aneurysm',correct:false,explain:'An aneurysm is a bulge in the vessel wall, not a clot.'}]}}];
-// Game numbers (see "Medical review & sources" in the last slide).
-// CURVE: [minutes since the blockage, % of the at-risk muscle still alive], from Reimer et al. 1977 (dog data).
-const CURVE=[[0,100],[20,100],[40,62],[180,43],[360,29]];
-const GAME={minPerSec:6,maxMin:360,lytic:{delay:35,keep:.55},pci:{delay:80,keep:1}};
-// ==========================
-const $=i=>document.getElementById(i);
-const v=$('v'),stage=$('stage'),left=$('left'),cap=$('cap'),card=$('card'),poly=$('poly'),dead=$('dead'),sl=$('sl');
-const h=(t,x,c)=>{const e=document.createElement(t);if(c)e.className=c;if(x)e.textContent=x;return e};
-const fmt=m=>{const H=Math.floor(m/60),M=Math.floor(m%60);return(H?H+' h ':'')+M+' min'};
-const alive=t=>{for(let i=1;i<CURVE.length;i++)if(t<=CURVE[i][0]){const a=CURVE[i-1],b=CURVE[i];return a[1]+(b[1]-a[1])*(t-a[0])/(b[0]-a[0])}return CURVE[CURVE.length-1][1]};
-function show(t,x,acts,fb,cls){card.innerHTML='';card.style.display='block';card.append(h('h2',t),h('p',x));if(fb)card.append(h('p',fb,cls));
- const r=h('div','','row');(acts||[]).forEach(a=>{const b=h('button',a.label,'b'+(a.alt?' alt':''));b.onclick=a.fn;r.append(b)});card.append(r)}
-const pts=a=>a.map(p=>p[0]+','+p[1]).join(' ');
-const cen=()=>[AREA.reduce((s,p)=>s+p[0],0)/AREA.length,AREA.reduce((s,p)=>s+p[1],0)/AREA.length];
-const showPoly=c=>{poly.setAttribute('points',pts(AREA));poly.setAttribute('class',c)};
-function setDead(V){const k=Math.sqrt(Math.max(0,1-V/100)),c=cen();dead.setAttribute('points',pts(AREA.map(p=>[c[0]+(p[0]-c[0])*k,c[1]+(p[1]-c[1])*k])))}
+// ===== EDIT THIS PART ================================================
+var VIDEO = '../videos/heart-ischemia.mp4';
+var FPS = 29.97;
+function sec(frame) { return frame / FPS; }   // Premiere frame number -> seconds
 
-// ---------- part A: the journey ----------
-let journey=false,P=0,cur=0,si=0,asking=false,END=1,ending=false,capI=-1,hold=0;
-const tOf=p=>T.first+p*(END-T.first),pOf=t=>(t-T.first)/(END-T.first);
-function ask(q,done){const render=(opts,fb)=>show('PREDICT',q.question,opts.map(o=>({label:o.text,alt:1,fn:()=>{
-  if(o.correct)show('CORRECT',q.question,[{label:'Keep going',fn:()=>{card.style.display='none';done()}}],o.explain,'ok');
-  else render(opts.filter(x=>x!==o),o.explain)}})),fb,'bad');render(q.options)}
-function move(d){if(!journey||asking)return;$('hint').style.display='none';const lim=si<STOP.length?pOf(STOP[si].t):1;P=Math.min(lim,Math.max(0,P+d));
- if(si<STOP.length&&P>=lim-1e-4){asking=true;ask(STOP[si].q,()=>{si++;asking=false})}else if(P>=.999&&si>=STOP.length&&!ending)finish()}
-function caption(t){let i=-1;CAPS.forEach((c,n)=>{if(t>=c[0]-.01)i=n});if(i!==capI){capI=i;cap.style.opacity=0;setTimeout(()=>{cap.textContent=CAPS[i]?CAPS[i][1]:'';cap.style.opacity=1},220)}}
-function begin(){card.style.display='none';poly.setAttribute('class','');journey=true;P=0;cur=T.first;$('ctl').style.display='flex';$('hint').style.display='block'}
-function finish(){ending=true;journey=false;$('ctl').style.display='none';stage.style.transition='filter 1.6s';stage.style.filter='brightness(.2)';
- setTimeout(()=>show('CODE RED','The artery is completely blocked. A patient like this is rolling into the emergency room right now, and now YOU are the doctor.',[{label:'Go to the ER',fn:finale}]),2400)}
-let lx=0,ly=0,drag=false;
-left.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;left.style.cursor='grabbing';try{left.setPointerCapture(e.pointerId)}catch(x){}});
-left.addEventListener('pointermove',e=>{if(!drag)return;move(((e.clientX-lx)+(e.clientY-ly))/Math.max(stage.clientWidth,320));lx=e.clientX;ly=e.clientY});
-const up=()=>{drag=false;left.style.cursor='grab'};left.addEventListener('pointerup',up);left.addEventListener('pointercancel',up);
-left.addEventListener('wheel',e=>{e.preventDefault();move(e.deltaY/2500)},{passive:false});
-addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown')move(.02);if(e.key==='ArrowLeft'||e.key==='ArrowUp')move(-.02)});
-sl.addEventListener('input',()=>move(sl.value/1000-P));
-[['bk',-1],['fw',1]].forEach(([id,d])=>{const b=$(id);b.addEventListener('pointerdown',()=>hold=d);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>hold=0))});
+// Moments in the video (seconds). These come from the Premiere frames and will be tuned together.
+var T = { first: 0.05, plaque: sec(208), thrombus: sec(241), outside: sec(331), occlusion: sec(358) };
 
-// ---------- part B: the ER monitor ----------
-let mode='',buf=new Float32Array(300),ph=0,stc=0;const G={};
-const msg=t=>$('msg').textContent=t;
-function acts(list){const a=$('acts');a.innerHTML='';list.forEach(x=>{const b=h('button',x.label,'b alt');b.onclick=x.fn;a.append(b)})}
-function finale(){card.style.display='none';stage.style.filter='';cap.style.opacity=0;$('track').style.display='none';document.body.classList.add('er');$('mon').style.display='flex';fit();v.currentTime=T.first;mode='er';lobby()}
-function lobby(){Object.assign(G,{run:0,t:0,V:100,asp:0,plan:null,rep:0,tgt:100});showPoly('pulse');dead.style.display='block';setDead(100);$('res').textContent='';
- msg('Crushing chest pain. His LAD is blocked, and the dark core will grow as the muscle dies. Give aspirin, then choose ONE way to open the artery. The nearest cath lab is 80 minutes away.');
- acts([{label:'Start the clock',fn:startER}])}
-function startER(){G.run=1;msg('');const A=$('acts');A.innerHTML='';const bt=x=>{const b=h('button',x,'b alt');A.append(b);return b};
- const bA=bt('Give aspirin (162–325 mg, chewed)'),bL=bt('Clot-busting drug (~35 min to work, opens the artery in only about half of patients, bleeding risk)'),bP=bt('Stent in the cath lab (~80 min, opens the artery reliably)');
- bA.onclick=()=>{G.asp=1;bA.disabled=true;msg('Aspirin given. It stops platelets clumping, but it does not open the artery.')};
- bL.onclick=()=>{G.plan={at:G.t+GAME.lytic.delay,keep:GAME.lytic.keep,k:'l'};bL.disabled=bP.disabled=true;msg('The drug is running. It needs about 35 minutes.')};
- bP.onclick=()=>{G.plan={at:G.t+GAME.pci.delay,keep:GAME.pci.keep,k:'p'};bL.disabled=bP.disabled=true;msg('On the way to the cath lab. About 80 minutes.')}}
-function endGame(){G.run=0;const pct=Math.round(G.V);let st=pct>=50?3:pct>=40?2:pct>=25?1:0;if(!G.asp)st=Math.max(0,st-1);
- msg((G.plan?'You saved '+pct+'% of the muscle. The artery opened '+fmt(G.plan.at)+' after the blockage. ':'Nothing opened the artery. After '+fmt(GAME.maxMin)+' only '+pct+'% of the muscle was alive. ')+(G.asp?'Aspirin: given.':'Aspirin: missed. It is part of every STEMI treatment, so you lose a star.')+' Time is muscle. With the cath lab 80 minutes away (under 120), a stent is the better choice; if it was over 120 minutes away, the clot-buster would be preferred.');
- $('res').textContent='★★★'.slice(0,st)+'☆☆☆'.slice(0,3-st);acts([{label:'Try again',fn:lobby},{label:'Replay the journey',fn:()=>location.reload()}])}
-function wave(f,st){const g=(c,w,a)=>a*Math.exp(-Math.pow((f-c)/w,2)),s=x=>1/(1+Math.exp(-x));
- return g(.12,.04,.12)-g(.255,.011,.14)+g(.28,.012,1)-g(.305,.012,.22)+st*s((f-.31)/.012)*(1-s((f-.62)/.03))+g(.62,.06,.28)}
-function er(dt){
- if(G.run){G.t+=dt*GAME.minPerSec;if(!G.rep)G.V=alive(G.t);
-  if(G.plan&&!G.rep&&G.t>=G.plan.at){G.rep=1;G.tgt=G.V*G.plan.keep;poly.setAttribute('class','good');msg(G.plan.k==='p'?'The stent opened the artery. The muscle that was still alive is saved.':'The drug opened the artery, but only partly: clot-busters restore normal flow in only about 50–60% of patients, and some muscle was already dead.')}
-  if(G.rep)G.V+=(G.tgt-G.V)*.08;
-  if(G.rep&&Math.abs(G.V-G.tgt)<.3){G.V=G.tgt;endGame()}else if(!G.plan&&G.t>=GAME.maxMin)endGame()}
- const hr=Math.round(78+35*Math.sin(Math.PI*(1-G.V/100))),c=$('ecg');stc+=((G.t>0?(G.rep?.08:.5):0)-stc)*.03;
- if(buf.length!==c.width)buf=new Float32Array(c.width);
- for(let i=0,n=Math.max(1,Math.round(dt*120));i<n;i++){ph+=hr/60/120;if(ph>=1)ph-=1;buf.copyWithin(0,1);buf[buf.length-1]=wave(ph,stc)}
- const x=c.getContext('2d'),W=c.width,H=c.height;x.clearRect(0,0,W,H);x.strokeStyle='#0f2a1c';x.lineWidth=1;
- for(let i=0;i<W;i+=30){x.beginPath();x.moveTo(i,0);x.lineTo(i,H);x.stroke()}
- x.beginPath();buf.forEach((y,i)=>i?x.lineTo(i,H*.7-y*H*.5):x.moveTo(i,H*.7-y*H*.5));x.strokeStyle='#39ff88';x.lineWidth=2;x.shadowColor='#39ff88';x.shadowBlur=8;x.stroke();x.shadowBlur=0;
- $('hr').textContent=hr;$('bp').textContent=Math.round(120-45*(1-G.V/100))+'/'+Math.round(80-25*(1-G.V/100));
- $('st').textContent=stc>.25?'ELEVATED':'normal';$('st').style.color=stc>.25?'#ff4d6d':'#39ff88';
- $('pct').textContent=Math.round(G.V)+'%';$('fill').style.width=Math.max(0,G.V)+'%';$('clk').textContent=G.t>0?'T+ '+fmt(G.t):'WAITING';setDead(G.V)}
+// The apical myocardium on the first picture, as [x, y] fractions of the picture.
+// Open this page with ?edit at the end of the address to draw it by clicking.
+var AREA = [[0.52, 0.78], [0.62, 0.76], [0.68, 0.82], [0.60, 0.88], [0.52, 0.85]];
 
-// ---------- loop and load ----------
-let last=performance.now();
-function tick(now){const dt=Math.min((now-last)/1000,.1);last=now;
- if(journey){if(hold)move(hold*dt*.12);const tt=tOf(P);cur+=(tt-cur)*.2;if(Math.abs(tt-cur)<.002)cur=tt;if(!v.seeking&&Math.abs(v.currentTime-cur)>.012)v.currentTime=cur;caption(cur);$('tf').style.width=P*100+'%';sl.value=P*1000}
- if(mode==='er')er(dt);requestAnimationFrame(tick)}
-function fit(){const vw=v.videoWidth||4,vh=v.videoHeight||5,w=left.clientWidth-16,hh=left.clientHeight-16,s=Math.min(w/vw,hh/vh);
- stage.style.width=Math.max(1,Math.floor(vw*s))+'px';stage.style.height=Math.max(1,Math.floor(vh*s))+'px';const c=$('ecg');c.width=c.clientWidth||300;c.height=c.clientHeight||140}
-addEventListener('resize',fit);new ResizeObserver(fit).observe(left);
-v.addEventListener('error',()=>$('loading').textContent='Could not load '+VIDEO);
-v.addEventListener('canplay',()=>{END=v.duration-.05;fit();$('loading').style.display='none';caption(T.first);showPoly('pulse');
- show('JOURNEY INTO THE ARTERY','The dark muscle at the apex of the heart lives off ONE artery. Travel inside it and answer the questions on the way. At the end, the patient arrives and you take over.',[{label:'Enter the artery',fn:begin}]);
- requestAnimationFrame(tick)},{once:true});
-v.src=VIDEO;
-</script></body></html>
+// Blood supply over the video, in percent (simplified teaching values: please review).
+// The last row is moved to the end of the video automatically.
+var FLOW = [
+  { t: 0,           open: 100, rest: 100, run: 100 },
+  { t: T.plaque,    open: 100, rest: 100, run: 100 },
+  { t: T.thrombus,  open: 65,  rest: 100, run: 70 },
+  { t: T.outside,   open: 15,  rest: 40,  run: 15 },
+  { t: T.occlusion, open: 5,   rest: 15,  run: 0 },
+  { t: 999,         open: 0,   rest: 0,   run: 0 }
+];
+
+// "Time is muscle" (simplified): 1 second = 10 minutes; muscle starts to die after 20 minutes, all dead at 6 hours.
+var RESCUE = { speed: 10, deadStart: 20, deadFull: 360 };
+
+var TEXT = {
+  s1: { title: 'Step 1 · Find the area',
+        ask: 'Find the darker area of heart muscle near the apex (the bottom of the heart) and tap it.',
+        hint: 'Not there. Look near the bottom of the heart, at the apex.',
+        reveal: 'It is here, near the apex.',
+        ok: 'Yes. This is the apical myocardium. It depends on the Left Anterior Descending Artery.' },
+  watch: { title: 'Follow the artery', text: 'A healthy artery feeds the muscle. 100% means all the blood it needs.' },
+  lab: { title: 'Step 2 · Grow the plaque',
+         text: 'Drag the slider to let the plaque grow. Watch the meters and the colour of the muscle.',
+         rest: 'The artery is narrower, but the muscle is still fine at rest. Now press Running.',
+         run: 'While running, the muscle gets less blood than it needs. A narrowing can stay silent until the heart works harder.' },
+  q2: { question: 'The plaque cracks open. What does the body do?',
+        options: [
+          { text: 'It forms a blood clot (a thrombus) on the plaque', correct: true, explain: 'Yes. A cracked plaque is treated like a wound, and a clot starts to form on it.' },
+          { text: 'It dissolves the plaque right away', correct: false, explain: 'No. A cracked plaque exposes the wall, and the blood starts to clot on it.' },
+          { text: 'Nothing happens', correct: false, explain: 'Not quite. The cracked surface triggers clotting.' }
+        ] },
+  p2: { title: 'The clot grows', text: 'Watch the meters fall.' },
+  rescue: { title: 'Final step · Time is muscle',
+            text: 'The artery is completely blocked. The clock runs fast: 1 second here is about 10 minutes. Restore the blood flow before the muscle dies.' },
+  tag: 'Apical myocardium'
+};
+// =====================================================================
+
+var $ = function (id) { return document.getElementById(id); };
+var v = $('v'), stage = $('stage'), viewer = $('viewer'), loadingEl = $('loading'), dash = $('dash');
+var poly = $('poly'), atag = $('atag'), thumb = $('thumb');
+var EDIT = new URLSearchParams(location.search).has('edit');
+var stageHandler = null, stopAt = null, onStop = null, wrong = 0, phase = '', mode = 'rest';
+var dashOn = false, rescueOn = false, rescueStart = 0, snap = document.createElement('canvas');
+
+function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+function say(o) {
+  $('title').textContent = o.title || '';
+  $('text').textContent = o.text || '';
+  $('fb').textContent = o.fb || '';
+  $('fb').className = o.fbClass || '';
+  var a = $('acts'); a.innerHTML = '';
+  (o.acts || []).forEach(function (x) {
+    var b = el('button', 'act' + (x.alt ? ' alt' : ''), x.label);
+    b.addEventListener('click', x.fn);
+    a.appendChild(b);
+  });
+}
+
+// ---- the area ----
+function centroid() { var x = 0, y = 0; AREA.forEach(function (p) { x += p[0]; y += p[1]; }); return [x / AREA.length, y / AREA.length]; }
+function pointsAttr() { return AREA.map(function (p) { return p[0] + ',' + p[1]; }).join(' '); }
+function placeTag(text) { var c = centroid(); atag.textContent = text; atag.style.left = c[0] * 100 + '%'; atag.style.top = c[1] * 100 + '%'; atag.style.display = 'block'; }
+function showPoly(cls, label) { poly.removeAttribute('style'); poly.setAttribute('points', pointsAttr()); poly.setAttribute('class', cls); if (label) placeTag(label); }
+function hidePoly() { poly.removeAttribute('style'); poly.setAttribute('class', ''); atag.style.display = 'none'; }
+function hitArea(p) {
+  var x = p.px, y = p.py, inside = false;
+  for (var i = 0, j = AREA.length - 1; i < AREA.length; j = i++) {
+    var xi = AREA[i][0], yi = AREA[i][1], xj = AREA[j][0], yj = AREA[j][1];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  var c = centroid();
+  return inside || Math.hypot((x - c[0]) * p.w, (y - c[1]) * p.h) <= 0.06 * p.w;
+}
+function point(e) { var b = stage.getBoundingClientRect(); return { px: (e.clientX - b.left) / b.width, py: (e.clientY - b.top) / b.height, w: b.width, h: b.height }; }
+stage.addEventListener('pointerup', function (e) { if (stageHandler) stageHandler(point(e)); });
+
+function seekTo(t) {
+  return new Promise(function (res) {
+    if (Math.abs(v.currentTime - t) < 0.02) return res();
+    v.addEventListener('seeked', function () { res(); }, { once: true });
+    v.currentTime = t;
+  });
+}
+function play() { v.play().catch(function () {}); }
+function playTo(t, cb) { stopAt = t; onStop = cb; play(); }
+
+// ---- dashboard: the muscle reacts to the blood supply ----
+function flowAt(t) {
+  var a = FLOW[0];
+  for (var i = 1; i < FLOW.length; i++) {
+    var b = FLOW[i];
+    if (t <= b.t) {
+      var k = Math.max(0, Math.min(1, (t - a.t) / ((b.t - a.t) || 1)));
+      return { open: a.open + (b.open - a.open) * k, rest: a.rest + (b.rest - a.rest) * k, run: a.run + (b.run - a.run) * k };
+    }
+    a = b;
+  }
+  return FLOW[FLOW.length - 1];
+}
+function colorFor(val, alpha) {
+  var h = val >= 50 ? 40 + (val - 50) / 50 * 100 : val / 50 * 40;
+  var s = val >= 20 ? 75 : 15 + val / 20 * 60;
+  var l = val >= 20 ? 50 : 20 + val / 20 * 30;
+  return 'hsla(' + h + ',' + s + '%,' + l + '%,' + (alpha === undefined ? 1 : alpha) + ')';
+}
+function updateDash() {
+  var f = flowAt(v.currentTime);
+  [['Open', f.open], ['Rest', f.rest], ['Run', f.run]].forEach(function (r) {
+    $('v' + r[0]).textContent = Math.round(r[1]) + '%';
+    var b = $('b' + r[0]); b.style.width = r[1] + '%'; b.style.background = colorFor(r[1]);
+  });
+  var c = thumb.getContext('2d');
+  c.drawImage(snap, 0, 0, thumb.width, thumb.height);
+  c.beginPath();
+  AREA.forEach(function (p, i) { var X = p[0] * thumb.width, Y = p[1] * thumb.height; if (i) c.lineTo(X, Y); else c.moveTo(X, Y); });
+  c.closePath();
+  c.fillStyle = colorFor(mode === 'run' ? f.run : f.rest, 0.6); c.fill();
+  c.lineWidth = 2; c.strokeStyle = '#fff'; c.stroke();
+}
+function showDash(on) { dashOn = on; dash.style.visibility = on ? 'visible' : 'hidden'; }
+
+// ---- the loop ----
+function fmt(m) { m = Math.round(m); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + (m % 60) + ' min'; }
+function lerp(a, b, k) { return Math.round(a + (b - a) * k); }
+function deadAt(m) { return Math.max(0, Math.min(1, (m - RESCUE.deadStart) / (RESCUE.deadFull - RESCUE.deadStart))); }
+function loop() {
+  if (stopAt !== null && v.currentTime >= stopAt) { var cb = onStop; stopAt = null; onStop = null; v.pause(); if (cb) cb(); }
+  if (dashOn) updateDash();
+  if (rescueOn) {
+    var m = (performance.now() - rescueStart) / 1000 * RESCUE.speed, d = deadAt(m);
+    poly.style.fill = 'rgba(' + lerp(255, 30, d) + ',' + lerp(209, 34, d) + ',' + lerp(102, 38, d) + ',' + (0.45 + 0.3 * d) + ')';
+    poly.style.stroke = 'rgb(' + lerp(255, 90, d) + ',' + lerp(209, 90, d) + ',' + lerp(102, 90, d) + ')';
+    var st = d <= 0 ? 'Ischemic: the muscle can still be saved' : d < 0.95 ? 'Injury is spreading: part of the muscle is dying' : 'Infarction: this muscle is dead';
+    placeTag(st);
+    $('fb').textContent = 'Time since the blockage: ' + fmt(m);
+    if (m >= RESCUE.deadFull) finishRescue(false, m);
+  }
+  requestAnimationFrame(loop);
+}
+v.addEventListener('ended', function () { if (phase === 'play2') rescue(); });
+
+// ---- a question that blocks the video until it is answered correctly ----
+function ask(q, onDone) {
+  function render(opts, fb) {
+    say({ title: 'Question', text: q.question, fb: fb || '', fbClass: fb ? 'bad' : '',
+      acts: opts.map(function (o) {
+        return { label: o.text, alt: true, fn: function () {
+          if (o.correct) say({ title: 'Question', text: q.question, fb: o.explain, fbClass: 'ok', acts: [{ label: 'Continue', fn: onDone }] });
+          else render(opts.filter(function (x) { return x !== o; }), o.explain);
+        } };
+      }) });
+  }
+  render(q.options);
+}
+
+// ---- step 1: find the shape of the area ----
+function start() {
+  phase = 'find'; wrong = 0; stageHandler = null; rescueOn = false; stopAt = null;
+  v.pause(); hidePoly(); showDash(false);
+  seekTo(T.first).then(function () {
+    var base = { title: TEXT.s1.title, text: TEXT.s1.ask };
+    var next = [{ label: 'Next', fn: function () {
+      hidePoly();
+      say({ title: TEXT.watch.title, text: TEXT.watch.text });
+      showDash(true);
+      playTo(T.plaque, lab);
+    } }];
+    say(base);
+    stageHandler = function (p) {
+      if (hitArea(p)) {
+        stageHandler = null; showPoly('good', TEXT.tag);
+        say({ title: base.title, text: base.text, fb: TEXT.s1.ok, fbClass: 'ok', acts: next });
+      } else if (++wrong >= 3) {
+        stageHandler = null; showPoly('pulse', TEXT.tag);
+        say({ title: base.title, text: base.text, fb: TEXT.s1.reveal, fbClass: 'ok', acts: next });
+      } else {
+        say({ title: base.title, text: base.text, fb: TEXT.s1.hint, fbClass: 'bad' });
+      }
+    };
+  });
+}
+
+// ---- step 2: grow the plaque yourself ----
+function lab() {
+  phase = 'lab'; mode = 'rest';
+  var ranRun = false, reached = false;
+  say({ title: TEXT.lab.title, text: TEXT.lab.text });
+  var acts = $('acts');
+  var sl = el('input'); sl.type = 'range'; sl.min = 0; sl.max = 1000; sl.value = 0; sl.style.width = '100%';
+  var bRest = el('button', 'act alt', 'Resting'), bRun = el('button', 'act alt', 'Running');
+  var crack = el('button', 'act', 'The plaque cracks'); crack.disabled = true;
+  function setMode(m) { mode = m; bRest.setAttribute('aria-pressed', m === 'rest'); bRun.setAttribute('aria-pressed', m === 'run'); check(); }
+  function check() {
+    if (sl.value / 1000 >= 0.9) {
+      reached = true;
+      if (mode === 'run') { ranRun = true; $('fb').textContent = TEXT.lab.run; $('fb').className = 'ok'; }
+      else if (!ranRun) { $('fb').textContent = TEXT.lab.rest; $('fb').className = 'ok'; }
+    }
+    crack.disabled = !(reached && ranRun);
+  }
+  sl.addEventListener('input', function () {
+    v.currentTime = T.plaque + (sl.value / 1000) * (T.thrombus - T.plaque - 0.03);
+    check();
+  });
+  bRest.addEventListener('click', function () { setMode('rest'); });
+  bRun.addEventListener('click', function () { setMode('run'); });
+  crack.addEventListener('click', function () {
+    ask(TEXT.q2, function () { phase = 'play2'; say({ title: TEXT.p2.title, text: TEXT.p2.text }); play(); });
+  });
+  var row = el('div'); row.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;width:100%';
+  row.appendChild(bRest); row.appendChild(bRun); row.appendChild(crack);
+  var box = el('div'); box.style.width = '100%';
+  box.appendChild(sl); box.appendChild(row);
+  acts.appendChild(box);
+  setMode('rest');
+  seekTo(T.plaque);
+}
+
+// ---- final step: time is muscle ----
+function rescue() {
+  phase = 'rescue'; rescueOn = false; stageHandler = null; showDash(false);
+  seekTo(T.first).then(function () {
+    poly.setAttribute('points', pointsAttr()); poly.setAttribute('class', 'edit');
+    poly.style.fill = 'rgba(255,209,102,.45)'; poly.style.stroke = '#ffd166';
+    placeTag('Ischemic: the muscle can still be saved');
+    say({ title: TEXT.rescue.title, text: TEXT.rescue.text, acts: [{ label: 'Start the clock', fn: startClock }] });
+  });
+}
+function startClock() {
+  rescueStart = performance.now(); rescueOn = true;
+  say({ title: TEXT.rescue.title, text: 'Restore the blood flow as early as you can.', acts: [{ label: 'Restore blood flow', fn: function () {
+    finishRescue(true, (performance.now() - rescueStart) / 1000 * RESCUE.speed);
+  } }] });
+}
+function finishRescue(restored, m) {
+  rescueOn = false;
+  var saved = Math.round(100 * (1 - deadAt(m)));
+  poly.style.fill = restored ? (saved >= 60 ? 'rgba(63,199,154,.4)' : 'rgba(255,209,102,.4)') : 'rgba(30,34,38,.8)';
+  poly.style.stroke = restored ? '#3fc79a' : '#555';
+  var acts = [{ label: 'Try again', fn: rescue }, { label: 'Replay lesson', alt: true, fn: start }];
+  if (restored) {
+    placeTag('Blood flow restored');
+    say({ title: 'Blood flow restored', text: 'You restored the blood flow after ' + fmt(m) + '. Apical myocardium saved: ' + saved + '%.',
+          fb: 'Every minute counts: the earlier blood flow is restored, the more muscle survives.', fbClass: 'ok', acts: acts });
+  } else {
+    placeTag('Infarction');
+    say({ title: 'Too late', text: 'After about 6 hours the apical myocardium is dead (a myocardial infarction).', fb: 'Try again and restore the blood flow earlier.', fbClass: 'bad', acts: acts });
+  }
+}
+
+// ---- edit mode: draw the area by clicking points ----
+function buildEdit() {
+  var p = $('panel'); p.innerHTML = '';
+  p.appendChild(el('p', '', 'Edit mode. Click around the dark area (the apical myocardium) to place points, one after another around its edge.'));
+  var out = el('textarea'); out.readOnly = true;
+  var tl = el('input'); tl.type = 'range'; tl.min = 0; tl.max = 1000; tl.value = 0; tl.style.width = '100%';
+  var tr = el('p', '', 'Video length: ' + v.duration.toFixed(2) + ' s. Drag to see any moment of the video.');
+  tl.addEventListener('input', function () {
+    v.currentTime = (tl.value / 1000) * v.duration;
+    tr.textContent = 'Video time: ' + v.currentTime.toFixed(2) + ' s (of ' + v.duration.toFixed(2) + ' s)';
+  });
+  AREA.length = 0;
+  function refresh() {
+    stage.querySelectorAll('.vdot').forEach(function (d) { d.remove(); });
+    AREA.forEach(function (q) { var d = el('div', 'vdot'); d.style.left = q[0] * 100 + '%'; d.style.top = q[1] * 100 + '%'; stage.appendChild(d); });
+    if (AREA.length > 2) { poly.setAttribute('points', pointsAttr()); poly.setAttribute('class', 'edit'); } else poly.setAttribute('class', '');
+    out.value = 'var AREA = [' + AREA.map(function (q) { return '[' + q[0] + ', ' + q[1] + ']'; }).join(', ') + '];';
+  }
+  var undo = el('button', 'tool', 'Undo last'), clear = el('button', 'tool', 'Clear'), copy = el('button', 'tool', 'Copy');
+  undo.addEventListener('click', function () { AREA.pop(); refresh(); });
+  clear.addEventListener('click', function () { AREA.length = 0; refresh(); });
+  copy.addEventListener('click', function () { out.select(); navigator.clipboard.writeText(out.value).catch(function () { document.execCommand('copy'); }); });
+  p.appendChild(undo); p.appendChild(clear); p.appendChild(copy); p.appendChild(tr); p.appendChild(tl); p.appendChild(out);
+  stageHandler = function (pt) { AREA.push([+pt.px.toFixed(3), +pt.py.toFixed(3)]); refresh(); };
+  stage.style.cursor = 'crosshair';
+  seekTo(T.first).then(refresh);
+}
+
+// ---- layout and load ----
+function fit() {
+  var wide = viewer.clientWidth >= 640;
+  var vw = v.videoWidth || 4, vh = v.videoHeight || 5;
+  var w = viewer.clientWidth - 16 - (wide ? 206 : 0), h = viewer.clientHeight - 16;
+  var s = Math.min(w / vw, h / vh);
+  stage.style.width = Math.floor(vw * s) + 'px';
+  stage.style.height = Math.floor(vh * s) + 'px';
+}
+function place() {
+  var wide = viewer.clientWidth >= 640;
+  dash.className = 'dash ' + (wide ? 'side' : 'over');
+  dash.style.visibility = dashOn ? 'visible' : 'hidden';
+  (wide ? viewer : stage).appendChild(dash);
+  fit();
+}
+window.addEventListener('resize', place);
+v.addEventListener('loadedmetadata', fit);
+v.addEventListener('error', function () { loadingEl.textContent = 'Could not load ' + VIDEO; });
+v.addEventListener('canplay', function () {
+  FLOW[FLOW.length - 1].t = v.duration;
+  snap.width = thumb.width = 160;
+  snap.height = thumb.height = Math.round(160 * (v.videoHeight || 5) / (v.videoWidth || 4));
+  place(); loadingEl.style.display = 'none';
+  seekTo(T.first).then(function () {
+    snap.getContext('2d').drawImage(v, 0, 0, snap.width, snap.height);
+    if (EDIT) buildEdit(); else start();
+    loop();
+  });
+}, { once: true });
+v.src = VIDEO;
+</script>
+</body>
+</html>
