@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ischemia: lesson (v2 - with challenges)</title>
+<title>Ischemia: lesson (v3 - case + lab + challenges)</title>
 <style>
   *{box-sizing:border-box;margin:0}
   html,body{height:100%}
@@ -123,6 +123,11 @@ var TEXT = {
           pciGo: 'The patient is on the way to the cath lab. It will take about 80 minutes.',
           lyticDone: 'The drug worked, but only partly: some muscle was already dead and not every clot dissolves.',
           pciDone: 'The stent opened the artery. The muscle that was still alive is saved.' },
+  case: { title: 'The case', go: 'Look inside his heart',
+          text: 'Mr. Ahmed, 58, a smoker with high cholesterol, arrives at the emergency room with crushing chest pain. To save him, first you need to understand what is happening inside his heart.' },
+  lab: { title: 'Lab · How tight is too tight?',
+         ask: 'The plaque keeps growing. Drag the slider to narrow the channel. Find the narrowing where the patient feels pain even at rest, then press "This is it".',
+         ok: 'Yes. Only a very tight narrowing (about 85% or more) starves the muscle at rest. Until then the body copes, which is why the artery can look almost normal from outside and the patient can feel fine.' },
   end: { title: 'What just happened',
          text: 'The Left Anterior Descending Artery feeds the apical myocardium. Plaque narrowed the channel, a thrombus blocked it, and the muscle was starved of oxygen (ischemia). If blood flow is not restored quickly, this muscle dies (a myocardial infarction).' },
   tag: 'Apical myocardium',
@@ -219,7 +224,7 @@ function goStage(i) {
 var EVENTS = [
   { t: STAGES[1].t, fn: function () { showStage(1); } },
   { t: STAGES[2].t, fn: function () { showStage(2); } },
-  { t: STOP.q1, stop: true, fn: function () { ask(TEXT.q1, play); } },
+  { t: STOP.q1, stop: true, fn: function () { ask(TEXT.q1, function () { stenosisLab(play); }); } },
   { t: STAGES[3].t, fn: function () { showStage(3, !review); } },
   { t: STOP.q2, stop: true, fn: function () { ask(TEXT.q2, function () { showStage(3); play(); }); } },
   { t: STAGES[4].t, fn: function () { showStage(4); } },
@@ -431,8 +436,51 @@ function runGame() {
   requestAnimationFrame(step);
 }
 
-// ---- step 1: find the shape of the area ----
+// ---- case card, then step 1 ----
 function start() {
+  review = false; evIdx = 0; wrong = 0; stageHandler = null;
+  v.pause(); hidePoly(); lockStages(true);
+  [].forEach.call(stagesEl.children, function (b) { b.setAttribute('aria-pressed', 'false'); });
+  seekTo(T.first).then(function () {
+    say({ title: TEXT.case.title, text: TEXT.case.text, acts: [{ label: TEXT.case.go, fn: startFind }] });
+  });
+}
+
+// ---- lab: drag the narrowing and see the symptoms (simplified, please review) ----
+function sym(n) {
+  return n < 50 ? 'No symptoms, even when exercising.' : n < 70 ? 'Fine at rest. Pain only with very hard exercise.' :
+    n < 85 ? 'Fine at rest, but chest pain with normal exercise (angina).' : 'Pain even at rest. Very little blood gets through.';
+}
+function stenosisLab(onDone) {
+  var L = TEXT.lab, n = 30;
+  say({ title: L.title, text: L.ask });
+  var box = el('div', 'gm');
+  box.innerHTML = '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><svg viewBox="0 0 100 100" width="110" height="110"><circle cx="50" cy="50" r="48" fill="#c98b93"/><circle cx="50" cy="50" r="40" fill="#f0d27a"/><circle id="lum" cx="50" cy="50" r="28" fill="#c0273d"/></svg><div style="flex:1;min-width:200px"><div class="gmrow" id="lnar"></div><input id="lsl" type="range" min="0" max="100" value="30" style="width:100%"><div class="gmrow">Flow at rest</div><div class="bar"><i id="lrest"></i></div><div class="gmrow">Flow during exercise</div><div class="bar"><i id="lex"></i></div></div></div>';
+  $('panel').insertBefore(box, $('acts'));
+  function draw() {
+    $('lum').setAttribute('r', 40 * (1 - n / 100));
+    $('lnar').textContent = 'Narrowing of the channel: ' + n + '%';
+    $('lrest').style.width = (n < 85 ? 100 : Math.max(0, 100 - (n - 85) * 6.7)) + '%';
+    $('lex').style.width = (n < 50 ? 100 : Math.max(0, 100 - (n - 50) * 2)) + '%';
+    $('fb').textContent = sym(n); $('fb').className = '';
+  }
+  $('lsl').addEventListener('input', function () { n = +this.value; draw(); });
+  draw();
+  var b = el('button', 'act', 'This is it');
+  b.addEventListener('click', function () {
+    if (n >= 85) {
+      $('lsl').disabled = true; b.remove();
+      $('fb').textContent = L.ok; $('fb').className = 'ok';
+      var c = el('button', 'act', 'Continue');
+      c.addEventListener('click', function () { box.remove(); onDone(); });
+      $('acts').appendChild(c);
+    } else { $('fb').textContent = 'Not yet. At ' + n + '%: ' + sym(n); $('fb').className = 'bad'; }
+  });
+  $('acts').appendChild(b);
+}
+
+// ---- step 1: find the shape of the area ----
+function startFind() {
   review = false; evIdx = 0; wrong = 0; stageHandler = null;
   v.pause(); hidePoly(); lockStages(true);
   [].forEach.call(stagesEl.children, function (b) { b.setAttribute('aria-pressed', 'false'); });
