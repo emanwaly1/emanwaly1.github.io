@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ischemia: journey (v4 - cinematic)</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Ischemia: journey (v5 - desktop + sources)</title>
 <style>
 *{box-sizing:border-box;margin:0}
 html,body{height:100%;overflow:hidden}
 body{background:#05080a;color:#e8f0f2;font:500 1rem system-ui,sans-serif}
-#app{height:100%;display:flex}
-#left{position:relative;flex:1;min-width:0;display:grid;place-items:center}
-#stage{position:relative;background:#000;border-radius:14px;overflow:hidden;touch-action:none;box-shadow:0 0 90px #ff4d6d2e}
+#app{height:100vh;height:100dvh;display:flex}
+#left{position:relative;flex:1;min-width:0;min-height:0;display:grid;place-items:center;touch-action:none;cursor:grab;user-select:none}
+#stage{position:relative;background:#000;border-radius:12px;overflow:hidden;box-shadow:0 0 90px #ff4d6d2e}
 #stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #poly{fill:rgba(255,77,109,.35);stroke:#ff4d6d;stroke-width:3;vector-effect:non-scaling-stroke;display:none}
@@ -14,40 +14,66 @@ body{background:#05080a;color:#e8f0f2;font:500 1rem system-ui,sans-serif}
 #poly.good{display:block;fill:rgba(57,255,136,.3);stroke:#39ff88}
 #dead{fill:rgba(15,15,18,.92);display:none}
 @keyframes glow{50%{fill-opacity:.1}}
-#cap{position:absolute;left:0;right:0;bottom:0;padding:56px 22px 20px;background:linear-gradient(transparent,#000e);text-align:center;line-height:1.5;transition:opacity .3s;pointer-events:none}
-#track{position:absolute;left:18px;right:18px;top:16px;height:3px;background:#ffffff26;border-radius:3px}
+#cap{position:absolute;left:0;right:0;bottom:0;padding:44px 16px 14px;background:linear-gradient(transparent,#000e);text-align:center;line-height:1.45;font-size:.95rem;transition:opacity .3s;pointer-events:none}
+#track{position:absolute;left:14px;right:14px;top:12px;height:3px;background:#ffffff26;border-radius:3px}
 #tf{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff4d6d,#ffc2cd);box-shadow:0 0 10px #ff4d6d;border-radius:3px}
-#hint{position:absolute;left:0;right:0;top:30px;text-align:center;font-size:.85rem;letter-spacing:.08em;color:#ffffffb0;display:none;pointer-events:none;animation:nudge 1.6s ease-in-out infinite}
-@keyframes nudge{50%{transform:translateX(12px)}}
-#card{position:absolute;left:12px;right:12px;bottom:12px;background:#0a1114f2;border:1px solid #ff4d6d66;border-radius:16px;padding:16px 18px;display:none;z-index:5}
-#card h2{font-size:1.05rem;color:#ff8da1;margin-bottom:6px;letter-spacing:.04em}
+#side{width:400px;flex:none;display:flex;flex-direction:column;gap:12px;padding:16px;border-left:1px solid #16252b;background:#070c0f;overflow:auto}
+#ctl{display:none;gap:10px;align-items:center}
+#sl{flex:1;height:36px;accent-color:#ff4d6d}
+#hint{display:none;font-size:.85rem;color:#9fb3ba}
+#card{display:none;background:#0c1519;border:1px solid #ff4d6d55;border-radius:14px;padding:14px}
+#card h2{font-size:.95rem;color:#ff8da1;margin-bottom:6px;letter-spacing:.05em}
 #card p{font-size:.95rem;line-height:1.5;margin-bottom:8px}
 #card .ok{color:#39ff88}#card .bad{color:#ff8da1}
 .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
-.b{font:600 .92rem system-ui,sans-serif;background:#ff4d6d;color:#fff;border:0;border-radius:999px;padding:9px 18px;cursor:pointer;text-align:left}
+.b{font:600 .95rem system-ui,sans-serif;background:#ff4d6d;color:#fff;border:0;border-radius:12px;padding:12px 16px;cursor:pointer;text-align:left;min-height:44px}
+.row .b{flex:1 1 100%}
+#ctl .b{flex:none;width:48px;text-align:center;padding:10px 0}
 .b.alt{background:#ffffff14;border:1px solid #ffffff33}
 .b:disabled{opacity:.35;cursor:default}
-#loading{position:absolute;inset:0;display:grid;place-items:center;background:#05080a;z-index:9}
-#mon{display:none;width:min(520px,46vw);padding:18px;flex-direction:column;gap:10px;border-left:1px solid #16252b;background:#070c0f;overflow:auto}
-.mh{display:flex;justify-content:space-between;color:#7fa;font-size:.9rem;letter-spacing:.08em}
-#ecg{width:100%;height:150px;background:#030607;border:1px solid #16252b;border-radius:10px}
-.vit{display:flex;gap:10px}.vit div{flex:1;background:#0c1519;border-radius:10px;padding:8px 12px}
-.vit small{display:block;color:#7f949b;font-size:.75rem}.vit b{font-size:1.5rem;color:#39ff88;font-variant-numeric:tabular-nums}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:#05080a;z-index:9}
+#mon{display:none;flex-direction:column;gap:10px}
+.mh{display:flex;justify-content:space-between;gap:8px;color:#7fa;font-size:.8rem;letter-spacing:.06em}
+#ecg{width:100%;height:140px;background:#030607;border:1px solid #16252b;border-radius:10px}
+.vit{display:flex;gap:8px}.vit div{flex:1;background:#0c1519;border-radius:10px;padding:8px 10px}
+.vit small{display:block;color:#7f949b;font-size:.7rem}.vit b{font-size:1.3rem;color:#39ff88;font-variant-numeric:tabular-nums}
 .bar{height:12px;background:#16252b;border-radius:999px;overflow:hidden}.bar i{display:block;height:100%;width:100%;background:#ff4d6d}
 #msg{font-size:.92rem;line-height:1.5;color:#c9d6da;min-height:3em}
 #res{font-size:1.6rem;color:#ffd166}
-@media(max-width:800px){#app{flex-direction:column}#mon{width:100%;border-left:0;border-top:1px solid #16252b;flex:none;max-height:55%}}
+#src{font-size:.82rem;line-height:1.45;color:#9fb3ba;border-top:1px solid #16252b;padding-top:8px}
+#src summary{cursor:pointer;color:#e8f0f2;font-weight:600;padding:6px 0}
+#src li{margin:6px 0 6px 16px}#src a{color:#7fd6ff}
+@media(max-width:800px){
+ #app{flex-direction:column}
+ #side{width:100%;flex:none;max-height:44%;border-left:0;border-top:1px solid #16252b;padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
+ body.er #side{max-height:68%}
+ #ecg{height:96px}.vit b{font-size:1.1rem}
+ #cap{font-size:.85rem;padding:30px 12px 10px}
+}
 </style></head><body>
+<div id="loading">Loading…</div>
 <div id="app">
- <div id="left"><div id="loading">Loading…</div>
-  <div id="stage"><video id="v" muted playsinline preload="auto"></video>
-   <svg id="ov" viewBox="0 0 1 1" preserveAspectRatio="none"><polygon id="poly" points=""/><polygon id="dead" points=""/></svg>
-   <div id="track"><i id="tf"></i></div><div id="hint">DRAG → TO TRAVEL</div><div id="cap"></div><div id="card"></div></div></div>
- <div id="mon"><div class="mh"><b>ER · MR. AHMED, 58</b><span id="clk">WAITING</span></div>
-  <canvas id="ecg" height="150"></canvas>
-  <div class="vit"><div><small>HEART RATE</small><b id="hr">78</b></div><div><small>BLOOD PRESSURE</small><b id="bp">120/80</b></div><div><small>ST SEGMENT</small><b id="st">normal</b></div></div>
-  <div>Muscle alive: <b id="pct">100%</b></div><div class="bar"><i id="fill"></i></div>
-  <div id="res"></div><p id="msg"></p><div class="row" id="acts"></div></div>
+ <div id="left"><div id="stage"><video id="v" muted playsinline preload="auto"></video>
+  <svg id="ov" viewBox="0 0 1 1" preserveAspectRatio="none"><polygon id="poly" points=""/><polygon id="dead" points=""/></svg>
+  <div id="track"><i id="tf"></i></div><div id="cap"></div></div></div>
+ <div id="side">
+  <div id="ctl"><button class="b alt" id="bk" aria-label="Back">◀</button><input type="range" id="sl" min="0" max="1000" value="0" aria-label="Journey"><button class="b alt" id="fw" aria-label="Forward">▶</button></div>
+  <div id="hint">Drag the video, move the slider, hold ◀ ▶, scroll, or press the arrow keys.</div>
+  <div id="card"></div>
+  <div id="mon">
+   <div class="mh"><b>ER · MR. AHMED, 58 · SIMULATED</b><span id="clk">WAITING</span></div>
+   <canvas id="ecg" height="140"></canvas>
+   <div class="vit"><div><small>HEART RATE</small><b id="hr">78</b></div><div><small>BLOOD PRESSURE</small><b id="bp">120/80</b></div><div><small>ST SEGMENT</small><b id="st">normal</b></div></div>
+   <div>Muscle alive: <b id="pct">100%</b></div><div class="bar"><i id="fill"></i></div>
+   <div id="res"></div><p id="msg"></p><div class="row" id="acts"></div>
+   <details id="src"><summary>Medical review &amp; sources</summary><ul>
+    <li><b>Aspirin:</b> 162–325 mg, chewed, as early as possible. It stops platelets clumping; it does not open the artery. <a href="https://www.aafp.org/afp/2017/0215/p232" target="_blank" rel="noopener">AAFP review</a> of the <a href="https://doi.org/10.1161/CIR.0b013e3182742c84" target="_blank" rel="noopener">2013 ACCF/AHA STEMI guideline</a>.</li>
+    <li><b>Which treatment:</b> a stent (primary PCI) is preferred if it can be done within 120 min of first medical contact; otherwise give a clot-buster within 30 min of arrival. <a href="https://www.heartfoundation.org.au/for-professionals/acs-guideline?tab=3" target="_blank" rel="noopener">Heart Foundation (Australia) 2025 ACS guideline</a>.</li>
+    <li><b>Clot-busters:</b> restore normal flow (TIMI 3) in only about 50–60% of patients, take about 30–45 min to work, and cause brain bleeding in up to about 1%. <a href="https://he02.tci-thaijo.org/index.php/bkkmedj/article/download/217917/151003" target="_blank" rel="noopener">Bangkok Medical Journal review, 2012</a>.</li>
+    <li><b>How fast muscle dies:</b> in dogs, necrosis starts about 20 min after the blockage and spreads from the inner wall outwards: 38% of the at-risk muscle was dead at 40 min, 57% at 3 h, 71% at 6 h. Humans vary with collateral flow. <a href="https://www.jci.org/references/scholar/30748/B4" target="_blank" rel="noopener">Reimer et al., Circulation 1977</a>.</li>
+    <li><b>Simulated:</b> the heart rate, blood pressure and ECG are illustrations, not patient data. For teaching only. Check the latest ACC/AHA guideline before clinical use.</li></ul></details>
+  </div>
+ </div>
 </div>
 <script>
 // ===== EDIT THIS PART =====
@@ -68,13 +94,16 @@ const STOP=[{t:sec(204),q:{question:'Fatty deposits are about to build up in the
  {text:'Thrombus',correct:true,explain:'Yes. A clot that forms and stays where it formed is a thrombus.'},
  {text:'Embolus',correct:false,explain:'An embolus travels through the blood. This clot stays put.'},
  {text:'Aneurysm',correct:false,explain:'An aneurysm is a bulge in the vessel wall, not a clot.'}]}}];
-// Simplified numbers for teaching (please review the medical content).
-const GAME={minPerSec:8,maxMin:300,tau:150,asp:.85,lytic:{delay:25,keep:.55},pci:{delay:80,keep:1}};
+// Game numbers (see "Medical review & sources" in the last slide).
+// CURVE: [minutes since the blockage, % of the at-risk muscle still alive], from Reimer et al. 1977 (dog data).
+const CURVE=[[0,100],[20,100],[40,62],[180,43],[360,29]];
+const GAME={minPerSec:6,maxMin:360,lytic:{delay:35,keep:.55},pci:{delay:80,keep:1}};
 // ==========================
 const $=i=>document.getElementById(i);
-const v=$('v'),stage=$('stage'),left=$('left'),cap=$('cap'),card=$('card'),poly=$('poly'),dead=$('dead');
+const v=$('v'),stage=$('stage'),left=$('left'),cap=$('cap'),card=$('card'),poly=$('poly'),dead=$('dead'),sl=$('sl');
 const h=(t,x,c)=>{const e=document.createElement(t);if(c)e.className=c;if(x)e.textContent=x;return e};
 const fmt=m=>{const H=Math.floor(m/60),M=Math.floor(m%60);return(H?H+' h ':'')+M+' min'};
+const alive=t=>{for(let i=1;i<CURVE.length;i++)if(t<=CURVE[i][0]){const a=CURVE[i-1],b=CURVE[i];return a[1]+(b[1]-a[1])*(t-a[0])/(b[0]-a[0])}return CURVE[CURVE.length-1][1]};
 function show(t,x,acts,fb,cls){card.innerHTML='';card.style.display='block';card.append(h('h2',t),h('p',x));if(fb)card.append(h('p',fb,cls));
  const r=h('div','','row');(acts||[]).forEach(a=>{const b=h('button',a.label,'b'+(a.alt?' alt':''));b.onclick=a.fn;r.append(b)});card.append(r)}
 const pts=a=>a.map(p=>p[0]+','+p[1]).join(' ');
@@ -83,45 +112,47 @@ const showPoly=c=>{poly.setAttribute('points',pts(AREA));poly.setAttribute('clas
 function setDead(V){const k=Math.sqrt(Math.max(0,1-V/100)),c=cen();dead.setAttribute('points',pts(AREA.map(p=>[c[0]+(p[0]-c[0])*k,c[1]+(p[1]-c[1])*k])))}
 
 // ---------- part A: the journey ----------
-let journey=false,P=0,cur=0,si=0,asking=false,END=1,ending=false,capI=-1;
+let journey=false,P=0,cur=0,si=0,asking=false,END=1,ending=false,capI=-1,hold=0;
 const tOf=p=>T.first+p*(END-T.first),pOf=t=>(t-T.first)/(END-T.first);
 function ask(q,done){const render=(opts,fb)=>show('PREDICT',q.question,opts.map(o=>({label:o.text,alt:1,fn:()=>{
   if(o.correct)show('CORRECT',q.question,[{label:'Keep going',fn:()=>{card.style.display='none';done()}}],o.explain,'ok');
   else render(opts.filter(x=>x!==o),o.explain)}})),fb,'bad');render(q.options)}
-function move(d){if(!journey||asking)return;const lim=si<STOP.length?pOf(STOP[si].t):1;P=Math.min(lim,Math.max(0,P+d));
+function move(d){if(!journey||asking)return;$('hint').style.display='none';const lim=si<STOP.length?pOf(STOP[si].t):1;P=Math.min(lim,Math.max(0,P+d));
  if(si<STOP.length&&P>=lim-1e-4){asking=true;ask(STOP[si].q,()=>{si++;asking=false})}else if(P>=.999&&si>=STOP.length&&!ending)finish()}
 function caption(t){let i=-1;CAPS.forEach((c,n)=>{if(t>=c[0]-.01)i=n});if(i!==capI){capI=i;cap.style.opacity=0;setTimeout(()=>{cap.textContent=CAPS[i]?CAPS[i][1]:'';cap.style.opacity=1},220)}}
-function begin(){card.style.display='none';poly.setAttribute('class','');journey=true;P=0;cur=T.first;$('hint').style.display='block'}
-function finish(){ending=true;journey=false;stage.style.transition='filter 1.6s';stage.style.filter='brightness(.2)';
- setTimeout(()=>show('CODE RED','The artery is completely blocked. A patient like this is rolling into the emergency room right now, and now YOU are the doctor.',[{label:'Go to the ER',fn:finale}]),2600)}
+function begin(){card.style.display='none';poly.setAttribute('class','');journey=true;P=0;cur=T.first;$('ctl').style.display='flex';$('hint').style.display='block'}
+function finish(){ending=true;journey=false;$('ctl').style.display='none';stage.style.transition='filter 1.6s';stage.style.filter='brightness(.2)';
+ setTimeout(()=>show('CODE RED','The artery is completely blocked. A patient like this is rolling into the emergency room right now, and now YOU are the doctor.',[{label:'Go to the ER',fn:finale}]),2400)}
 let lx=0,ly=0,drag=false;
-stage.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;$('hint').style.display='none';stage.setPointerCapture(e.pointerId)});
-stage.addEventListener('pointermove',e=>{if(!drag)return;move(((e.clientX-lx)+(e.clientY-ly))/(stage.clientWidth*1.4));lx=e.clientX;ly=e.clientY});
-stage.addEventListener('pointerup',()=>drag=false);
-stage.addEventListener('wheel',e=>{e.preventDefault();move(e.deltaY/3000)},{passive:false});
+left.addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;left.style.cursor='grabbing';try{left.setPointerCapture(e.pointerId)}catch(x){}});
+left.addEventListener('pointermove',e=>{if(!drag)return;move(((e.clientX-lx)+(e.clientY-ly))/Math.max(stage.clientWidth,320));lx=e.clientX;ly=e.clientY});
+const up=()=>{drag=false;left.style.cursor='grab'};left.addEventListener('pointerup',up);left.addEventListener('pointercancel',up);
+left.addEventListener('wheel',e=>{e.preventDefault();move(e.deltaY/2500)},{passive:false});
 addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown')move(.02);if(e.key==='ArrowLeft'||e.key==='ArrowUp')move(-.02)});
+sl.addEventListener('input',()=>move(sl.value/1000-P));
+[['bk',-1],['fw',1]].forEach(([id,d])=>{const b=$(id);b.addEventListener('pointerdown',()=>hold=d);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>hold=0))});
 
 // ---------- part B: the ER monitor ----------
 let mode='',buf=new Float32Array(300),ph=0,stc=0;const G={};
 const msg=t=>$('msg').textContent=t;
 function acts(list){const a=$('acts');a.innerHTML='';list.forEach(x=>{const b=h('button',x.label,'b alt');b.onclick=x.fn;a.append(b)})}
-function finale(){card.style.display='none';stage.style.filter='';cap.style.opacity=0;$('track').style.display='none';$('mon').style.display='flex';fit();v.currentTime=T.first;mode='er';lobby()}
+function finale(){card.style.display='none';stage.style.filter='';cap.style.opacity=0;$('track').style.display='none';document.body.classList.add('er');$('mon').style.display='flex';fit();v.currentTime=T.first;mode='er';lobby()}
 function lobby(){Object.assign(G,{run:0,t:0,V:100,asp:0,plan:null,rep:0,tgt:100});showPoly('pulse');dead.style.display='block';setDead(100);$('res').textContent='';
- msg('Crushing chest pain. His LAD is blocked and the dark core will grow as the muscle dies. You can give aspirin and choose ONE way to open the artery. The cath lab is 80 minutes away.');
+ msg('Crushing chest pain. His LAD is blocked, and the dark core will grow as the muscle dies. Give aspirin, then choose ONE way to open the artery. The nearest cath lab is 80 minutes away.');
  acts([{label:'Start the clock',fn:startER}])}
 function startER(){G.run=1;msg('');const A=$('acts');A.innerHTML='';const bt=x=>{const b=h('button',x,'b alt');A.append(b);return b};
- const bA=bt('Give aspirin'),bL=bt('Clot-busting drug (~25 min, opens it about half the time, bleeding risk)'),bP=bt('Stent in the cath lab (~80 min, opens it reliably)');
- bA.onclick=()=>{G.asp=1;bA.disabled=true;msg('Aspirin given. The muscle dies a little slower.')};
- bL.onclick=()=>{G.plan={at:G.t+GAME.lytic.delay,keep:GAME.lytic.keep,k:'l'};bL.disabled=bP.disabled=true;msg('The drug is running. It needs about 25 minutes.')};
+ const bA=bt('Give aspirin (162–325 mg, chewed)'),bL=bt('Clot-busting drug (~35 min to work, opens the artery in only about half of patients, bleeding risk)'),bP=bt('Stent in the cath lab (~80 min, opens the artery reliably)');
+ bA.onclick=()=>{G.asp=1;bA.disabled=true;msg('Aspirin given. It stops platelets clumping, but it does not open the artery.')};
+ bL.onclick=()=>{G.plan={at:G.t+GAME.lytic.delay,keep:GAME.lytic.keep,k:'l'};bL.disabled=bP.disabled=true;msg('The drug is running. It needs about 35 minutes.')};
  bP.onclick=()=>{G.plan={at:G.t+GAME.pci.delay,keep:GAME.pci.keep,k:'p'};bL.disabled=bP.disabled=true;msg('On the way to the cath lab. About 80 minutes.')}}
-function endGame(){G.run=0;const pct=Math.round(G.V),st=pct>=50?3:pct>=35?2:pct>=20?1:0;
- msg((G.plan?'You saved '+pct+'% of the muscle. The artery opened '+fmt(G.plan.at)+' after the blockage'+(G.asp?', and you gave aspirin.':', but you gave no aspirin.'):'Nothing opened the artery. Only '+pct+'% of the muscle survived.')+' Time is muscle: every minute counts. With the cath lab 80 minutes away the stent was the better choice; if it was over about 2 hours away, the drug would win.');
+function endGame(){G.run=0;const pct=Math.round(G.V);let st=pct>=50?3:pct>=40?2:pct>=25?1:0;if(!G.asp)st=Math.max(0,st-1);
+ msg((G.plan?'You saved '+pct+'% of the muscle. The artery opened '+fmt(G.plan.at)+' after the blockage. ':'Nothing opened the artery. After '+fmt(GAME.maxMin)+' only '+pct+'% of the muscle was alive. ')+(G.asp?'Aspirin: given.':'Aspirin: missed. It is part of every STEMI treatment, so you lose a star.')+' Time is muscle. With the cath lab 80 minutes away (under 120), a stent is the better choice; if it was over 120 minutes away, the clot-buster would be preferred.');
  $('res').textContent='★★★'.slice(0,st)+'☆☆☆'.slice(0,3-st);acts([{label:'Try again',fn:lobby},{label:'Replay the journey',fn:()=>location.reload()}])}
 function wave(f,st){const g=(c,w,a)=>a*Math.exp(-Math.pow((f-c)/w,2)),s=x=>1/(1+Math.exp(-x));
  return g(.12,.04,.12)-g(.255,.011,.14)+g(.28,.012,1)-g(.305,.012,.22)+st*s((f-.31)/.012)*(1-s((f-.62)/.03))+g(.62,.06,.28)}
 function er(dt){
- if(G.run){const m=dt*GAME.minPerSec;G.t+=m;if(!G.rep)G.V-=G.V*(m/GAME.tau)*(G.asp?GAME.asp:1);
-  if(G.plan&&!G.rep&&G.t>=G.plan.at){G.rep=1;G.tgt=G.V*G.plan.keep;poly.setAttribute('class','good');msg(G.plan.k==='p'?'The stent opened the artery. The muscle that was still alive is saved.':'The drug worked, but only partly: some muscle was already dead.')}
+ if(G.run){G.t+=dt*GAME.minPerSec;if(!G.rep)G.V=alive(G.t);
+  if(G.plan&&!G.rep&&G.t>=G.plan.at){G.rep=1;G.tgt=G.V*G.plan.keep;poly.setAttribute('class','good');msg(G.plan.k==='p'?'The stent opened the artery. The muscle that was still alive is saved.':'The drug opened the artery, but only partly: clot-busters restore normal flow in only about 50–60% of patients, and some muscle was already dead.')}
   if(G.rep)G.V+=(G.tgt-G.V)*.08;
   if(G.rep&&Math.abs(G.V-G.tgt)<.3){G.V=G.tgt;endGame()}else if(!G.plan&&G.t>=GAME.maxMin)endGame()}
  const hr=Math.round(78+35*Math.sin(Math.PI*(1-G.V/100))),c=$('ecg');stc+=((G.t>0?(G.rep?.08:.5):0)-stc)*.03;
@@ -137,14 +168,14 @@ function er(dt){
 // ---------- loop and load ----------
 let last=performance.now();
 function tick(now){const dt=Math.min((now-last)/1000,.1);last=now;
- if(journey){const tt=tOf(P);cur+=(tt-cur)*.2;if(Math.abs(tt-cur)<.002)cur=tt;if(!v.seeking&&Math.abs(v.currentTime-cur)>.012)v.currentTime=cur;caption(cur);$('tf').style.width=P*100+'%'}
+ if(journey){if(hold)move(hold*dt*.12);const tt=tOf(P);cur+=(tt-cur)*.2;if(Math.abs(tt-cur)<.002)cur=tt;if(!v.seeking&&Math.abs(v.currentTime-cur)>.012)v.currentTime=cur;caption(cur);$('tf').style.width=P*100+'%';sl.value=P*1000}
  if(mode==='er')er(dt);requestAnimationFrame(tick)}
-function fit(){const vw=v.videoWidth||4,vh=v.videoHeight||5,w=left.clientWidth-24,hh=left.clientHeight-24,s=Math.min(w/vw,hh/vh);
- stage.style.width=Math.floor(vw*s)+'px';stage.style.height=Math.floor(vh*s)+'px';const c=$('ecg');c.width=c.clientWidth||300}
-addEventListener('resize',fit);
+function fit(){const vw=v.videoWidth||4,vh=v.videoHeight||5,w=left.clientWidth-16,hh=left.clientHeight-16,s=Math.min(w/vw,hh/vh);
+ stage.style.width=Math.max(1,Math.floor(vw*s))+'px';stage.style.height=Math.max(1,Math.floor(vh*s))+'px';const c=$('ecg');c.width=c.clientWidth||300;c.height=c.clientHeight||140}
+addEventListener('resize',fit);new ResizeObserver(fit).observe(left);
 v.addEventListener('error',()=>$('loading').textContent='Could not load '+VIDEO);
 v.addEventListener('canplay',()=>{END=v.duration-.05;fit();$('loading').style.display='none';caption(T.first);showPoly('pulse');
- show('JOURNEY INTO THE ARTERY','The dark muscle at the apex of the heart lives off ONE artery. Drag to travel inside it and answer the questions on the way. At the end, the patient arrives and you take over.',[{label:'Enter the artery',fn:begin}]);
+ show('JOURNEY INTO THE ARTERY','The dark muscle at the apex of the heart lives off ONE artery. Travel inside it and answer the questions on the way. At the end, the patient arrives and you take over.',[{label:'Enter the artery',fn:begin}]);
  requestAnimationFrame(tick)},{once:true});
 v.src=VIDEO;
 </script></body></html>
