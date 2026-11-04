@@ -35,6 +35,13 @@
   .act.done{background:#cfeadf;border:1px solid #3f8f89;color:#22313a}
   #panel textarea{width:100%;height:92px;margin-top:6px;font:12px ui-monospace,Consolas,monospace}
   #panel .tool{font:500 .85rem system-ui,sans-serif;background:#fff;border:1px solid #d3e0dc;border-radius:999px;padding:5px 12px;cursor:pointer;margin:4px 4px 0 0}
+  #dead{fill:rgba(45,45,50,.88);stroke:none;display:none}
+  #mine{fill:rgba(255,209,102,.25);stroke:#fff;stroke-width:2;stroke-dasharray:6 4;vector-effect:non-scaling-stroke;display:none}
+  .gm{margin:8px 0}
+  .gmrow{font-size:.92rem;color:#3b4d56}
+  .bar{height:12px;background:#e6edea;border-radius:999px;overflow:hidden;margin-top:4px}
+  .bar i{display:block;height:100%;width:100%;background:#d9566f}
+  .act:disabled{opacity:.45;cursor:default}
 </style>
 </head>
 <body>
@@ -42,7 +49,7 @@
   <div id="loading">Loading lesson…</div>
   <div id="stage">
     <video id="v" muted playsinline preload="auto"></video>
-    <svg id="ov" viewBox="0 0 1 1" preserveAspectRatio="none"><polygon id="poly" points=""/></svg>
+    <svg id="ov" viewBox="0 0 1 1" preserveAspectRatio="none"><polygon id="poly" points=""/><polygon id="dead" points=""/><polygon id="mine" points=""/></svg>
     <div id="atag"></div>
   </div>
 </div>
@@ -96,11 +103,26 @@ var TEXT = {
           { text: 'Embolus', correct: false, explain: 'An embolus is a clot or other material that travels through the blood. This clot stays where it formed, so it is a thrombus.' },
           { text: 'Aneurysm', correct: false, explain: 'An aneurysm is a bulge in the wall of a vessel, not a clot.' }
         ] },
-  order: { title: 'Last step · Put the events in order',
+  order: { title: 'Challenge 1 · Put the events in order',
            ask: 'Tap the events in the order they happen.',
            items: ['Plaque builds up in the artery wall', 'A thrombus forms on the plaque', 'The artery is blocked', 'The muscle is starved of oxygen (ischemia)'],
            shown: [2, 0, 3, 1],
            hint: 'Not yet. Think about what has to happen first.' },
+  draw: { title: 'Challenge 2 · Draw it from memory',
+          ask: 'The artery is blocked and nobody treats it. Draw with your finger (or mouse) around the muscle that will be starved of blood.',
+          great: 'Great memory! Your drawing matches the real area very well.',
+          close: 'Close. The red shape is the real area.',
+          far: 'Not quite. The red shape is the muscle that depends on this artery: the apical myocardium.' },
+  game: { title: 'Challenge 3 · Save the muscle',
+          intro: 'The artery is blocked. A patient with chest pain has just arrived and the clock is running: every minute, more heart muscle dies, from the inside out (the dark core grows). You can give aspirin, and you must choose ONE way to open the artery. The cath lab (where stents are placed) is 80 minutes away. Be fast.',
+          aspirin: 'Give aspirin',
+          lytic: 'Clot-busting drug (works in ~25 min, opens the artery only about half the time, can cause bleeding)',
+          pci: 'Stent in the cath lab (ready in ~80 min, opens the artery reliably)',
+          aspOk: 'Aspirin given. It helps stop the clot from growing, so the muscle dies a little slower.',
+          lyticGo: 'The drug is running. It needs about 25 minutes to work.',
+          pciGo: 'The patient is on the way to the cath lab. It will take about 80 minutes.',
+          lyticDone: 'The drug worked, but only partly: some muscle was already dead and not every clot dissolves.',
+          pciDone: 'The stent opened the artery. The muscle that was still alive is saved.' },
   end: { title: 'What just happened',
          text: 'The Left Anterior Descending Artery feeds the apical myocardium. Plaque narrowed the channel, a thrombus blocked it, and the muscle was starved of oxygen (ischemia). If blood flow is not restored quickly, this muscle dies (a myocardial infarction).' },
   tag: 'Apical myocardium',
@@ -110,7 +132,8 @@ var TEXT = {
 
 var $ = function (id) { return document.getElementById(id); };
 var v = $('v'), stage = $('stage'), viewer = $('viewer'), loadingEl = $('loading'), stagesEl = $('stages');
-var poly = $('poly'), atag = $('atag');
+var poly = $('poly'), atag = $('atag'), dead = $('dead'), mine = $('mine');
+var drawer = null;
 var EDIT = new URLSearchParams(location.search).has('edit');
 var stageHandler = null, evIdx = 0, review = false, wrong = 0;
 
@@ -146,7 +169,7 @@ function showPoly(cls, label) {
     atag.style.display = 'block';
   }
 }
-function hidePoly() { poly.setAttribute('class', ''); atag.style.display = 'none'; }
+function hidePoly() { poly.setAttribute('class', ''); atag.style.display = 'none'; dead.style.display = 'none'; mine.style.display = 'none'; }
 function hitArea(p) {
   var x = p.px, y = p.py, inside = false;
   for (var i = 0, j = AREA.length - 1; i < AREA.length; j = i++) {
@@ -242,7 +265,7 @@ function orderActivity() {
       if (idx === next) {
         b.disabled = true; b.classList.add('done'); b.textContent = (next + 1) + '. ' + O.items[idx];
         next++; $('fb').textContent = '';
-        if (next === O.items.length) closing();
+        if (next === O.items.length) drawActivity();
       } else { $('fb').textContent = O.hint; $('fb').className = 'bad'; }
     });
     acts.appendChild(b);
@@ -251,9 +274,161 @@ function orderActivity() {
 function closing() {
   lockStages(false);
   seekTo(T.first).then(function () {
-    showPoly('pulse', TEXT.tagEnd);
+    hidePoly(); showPoly('pulse', TEXT.tagEnd);
     say({ title: TEXT.end.title, text: TEXT.end.text, acts: [{ label: 'Replay lesson', fn: start }] });
   });
+}
+
+// ---- geometry helpers ----
+function inPoly(P, x, y) {
+  var inside = false;
+  for (var i = 0, j = P.length - 1; i < P.length; j = i++) {
+    var xi = P[i][0], yi = P[i][1], xj = P[j][0], yj = P[j][1];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function overlap(A, B) {   // how much two shapes overlap (0 to 1)
+  var inter = 0, uni = 0, N = 200;
+  for (var a = 0; a < N; a++) for (var b = 0; b < N; b++) {
+    var x = (a + 0.5) / N, y = (b + 0.5) / N, p = inPoly(A, x, y), q = inPoly(B, x, y);
+    if (p && q) inter++;
+    if (p || q) uni++;
+  }
+  return uni ? inter / uni : 0;
+}
+stage.addEventListener('pointerdown', function (e) { if (drawer) drawer.down(e); });
+stage.addEventListener('pointermove', function (e) { if (drawer) drawer.move(e); });
+stage.addEventListener('pointerup', function () { if (drawer) drawer.up(); });
+stage.addEventListener('pointercancel', function () { if (drawer) drawer.up(); });
+
+// ---- challenge 2: draw the area from memory ----
+function drawActivity() {
+  var D = TEXT.draw, pts = [], on = false;
+  seekTo(T.first).then(function () {
+    hidePoly();
+    say({ title: D.title, text: D.ask });
+    var acts = $('acts');
+    var done = el('button', 'act', 'Done'), clr = el('button', 'act alt', 'Clear');
+    done.disabled = true;
+    acts.appendChild(done); acts.appendChild(clr);
+    function paint() {
+      if (pts.length > 2) {
+        mine.setAttribute('points', pts.map(function (q) { return q[0] + ',' + q[1]; }).join(' '));
+        mine.style.display = 'block';
+      } else mine.style.display = 'none';
+      done.disabled = pts.length < 6;
+    }
+    drawer = {
+      down: function (e) {
+        on = true; pts = [];
+        try { stage.setPointerCapture(e.pointerId); } catch (x) {}
+        this.move(e);
+      },
+      move: function (e) {
+        if (!on) return;
+        var p = point(e), l = pts[pts.length - 1];
+        if (l && Math.hypot((p.px - l[0]) * p.w, (p.py - l[1]) * p.h) < 4) return;
+        pts.push([+p.px.toFixed(3), +p.py.toFixed(3)]);
+        paint();
+      },
+      up: function () { on = false; }
+    };
+    stage.style.touchAction = 'none';
+    clr.addEventListener('click', function () { pts = []; paint(); });
+    done.addEventListener('click', function () {
+      drawer = null; stage.style.touchAction = 'manipulation';
+      var pct = Math.round(overlap(AREA, pts) * 100);
+      showPoly('pulse', TEXT.tag);
+      var msg = pct >= 50 ? D.great : pct >= 25 ? D.close : D.far;
+      say({ title: D.title, text: D.ask, fb: msg + ' (match: ' + pct + '%)', fbClass: pct >= 25 ? 'ok' : 'bad',
+        acts: [{ label: 'Next', fn: gameIntro }] });
+    });
+  });
+}
+
+// ---- challenge 3: time is muscle ----
+// Simplified numbers for teaching (please review the medical content).
+var GAME = {
+  minPerSec: 8,         // simulated minutes that pass every real second
+  maxMin: 300,          // if nothing is done by then, the game ends
+  tau: 150,             // how fast the muscle dies (bigger = slower)
+  aspirinSlow: 0.85,    // aspirin: the muscle dies at 85% of the speed
+  lytic: { delay: 25, keep: 0.55 },   // clot-busting drug: minutes until it works, and the share of living muscle it saves
+  pci: { delay: 80, keep: 1 }         // stent: minutes until the artery opens, and the share of living muscle it saves
+};
+function fmt(m) { var h = Math.floor(m / 60), mm = Math.floor(m % 60); return (h ? h + ' h ' : '') + mm + ' min'; }
+function setDead(V) {
+  var k = Math.sqrt(Math.max(0, 1 - V / 100)), c = centroid();
+  dead.setAttribute('points', AREA.map(function (p) {
+    return (c[0] + (p[0] - c[0]) * k) + ',' + (c[1] + (p[1] - c[1]) * k);
+  }).join(' '));
+}
+function gameIntro() {
+  seekTo(T.first).then(function () {
+    hidePoly(); showPoly('pulse');
+    say({ title: TEXT.game.title, text: TEXT.game.intro, acts: [{ label: 'Start the clock', fn: runGame }] });
+  });
+}
+function runGame() {
+  var G = TEXT.game;
+  var S = { t: 0, V: 100, asp: false, plan: null, reperf: false, target: 100, done: false, last: performance.now() };
+  hidePoly(); showPoly('pulse'); dead.style.display = 'block'; setDead(100);
+  say({ title: G.title, text: '' });
+  var gm = el('div', 'gm'), clock = el('div', 'gmrow'), lab = el('div', 'gmrow'), bar = el('div', 'bar'), fill = el('i');
+  bar.appendChild(fill);
+  gm.appendChild(clock); gm.appendChild(lab); gm.appendChild(bar);
+  $('panel').insertBefore(gm, $('acts'));
+  var acts = $('acts');
+  var bAsp = el('button', 'act alt', G.aspirin), bLy = el('button', 'act alt', G.lytic), bPci = el('button', 'act alt', G.pci);
+  [bAsp, bLy, bPci].forEach(function (b) { acts.appendChild(b); });
+  function note(t, cls) { $('fb').textContent = t; $('fb').className = cls || ''; }
+  bAsp.addEventListener('click', function () { S.asp = true; bAsp.disabled = true; note(G.aspOk, 'ok'); });
+  function choose(opt, goText) {
+    S.plan = { at: S.t + opt.delay, keep: opt.keep, kind: opt === GAME.pci ? 'pci' : 'lytic' };
+    bLy.disabled = true; bPci.disabled = true; note(goText, 'ok');
+  }
+  bLy.addEventListener('click', function () { choose(GAME.lytic, G.lyticGo); });
+  bPci.addEventListener('click', function () { choose(GAME.pci, G.pciGo); });
+
+  function render() {
+    clock.textContent = 'Time since the blockage: ' + fmt(S.t) + (S.plan && !S.reperf ? '  ·  treatment works in ' + fmt(Math.max(0, S.plan.at - S.t)) : '');
+    lab.textContent = 'Muscle still alive: ' + Math.round(S.V) + '%';
+    fill.style.width = Math.max(0, S.V) + '%';
+    setDead(S.V);
+  }
+  function finish() {
+    S.done = true; gm.remove();
+    var pct = Math.round(S.V);
+    var stars = pct >= 50 ? 3 : pct >= 35 ? 2 : pct >= 20 ? 1 : 0;
+    var star = '★★★'.slice(0, stars) + '☆☆☆'.slice(0, 3 - stars);
+    var text;
+    if (!S.plan) text = 'Time ran out and nothing opened the artery. Only ' + pct + '% of the muscle survived.';
+    else text = 'You saved ' + pct + '% of the muscle. The artery was opened ' + fmt(S.plan.at) + ' after the blockage' + (S.asp ? ', and you gave aspirin.' : ', but you did not give aspirin.');
+    text += ' Time is muscle: the sooner the artery is open, the more muscle survives. Here the cath lab was 80 minutes away, so the stent was the better choice. If it had been more than about 2 hours away, the clot-busting drug would be the better choice.';
+    say({ title: 'Result ' + star, text: text,
+      acts: [{ label: 'Try again', alt: true, fn: runGame }, { label: 'Finish', fn: closing }] });
+  }
+  function step(now) {
+    if (S.done) return;
+    var dt = Math.min((now - S.last) / 1000, 0.1) * GAME.minPerSec;
+    S.last = now; S.t += dt;
+    if (!S.reperf) S.V -= S.V * (dt / GAME.tau) * (S.asp ? GAME.aspirinSlow : 1);
+    if (S.plan && !S.reperf && S.t >= S.plan.at) {
+      S.reperf = true; S.target = S.V * S.plan.keep;
+      poly.setAttribute('class', 'good');
+      note(S.plan.kind === 'pci' ? G.pciDone : G.lyticDone, 'ok');
+    }
+    if (S.reperf) S.V += (S.target - S.V) * 0.08;
+    render();
+    if (S.reperf && Math.abs(S.V - S.target) < 0.3) { S.V = S.target; render(); return finish(); }
+    if (!S.plan && S.t >= GAME.maxMin) return finish();
+    requestAnimationFrame(step);
+  }
+  note('');
+  render();
+  S.last = performance.now();
+  requestAnimationFrame(step);
 }
 
 // ---- step 1: find the shape of the area ----
