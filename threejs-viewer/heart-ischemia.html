@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ischemia: lesson</title>
+<style>
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{background:#f1f6f4;color:#22313a;font:500 1rem system-ui,sans-serif;display:flex;flex-direction:column}
+  #viewer{flex:1;min-height:0;position:relative;display:grid;place-items:center;overflow:hidden}
+  #stage{position:relative;background:#000;border-radius:12px;overflow:hidden;touch-action:manipulation}
+  #stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+  #ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  #poly{fill:rgba(255,209,102,.25);stroke:#ffd166;stroke-width:3;vector-effect:non-scaling-stroke;display:none}
+  #poly.good{fill:rgba(63,199,154,.3);stroke:#3fc79a;display:block}
+  #poly.pulse{fill:rgba(217,86,111,.4);stroke:#d9566f;display:block;animation:glow 1.1s ease-in-out infinite}
+  #poly.edit{display:block}
+  @keyframes glow{50%{fill-opacity:.1}}
+  #atag{position:absolute;transform:translate(-50%,-50%);background:#fffe;border:1px solid #d3e0dc;border-radius:999px;padding:3px 10px;font-size:.78rem;display:none;pointer-events:none;white-space:nowrap}
+  .vdot{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#ffd166;border:2px solid #fff;pointer-events:none}
+  #loading{position:absolute;inset:0;display:grid;place-items:center;background:#f1f6f4;z-index:9;font-size:1.1rem;text-align:center;padding:20px}
+  #stages{flex:none;display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:8px 12px 0}
+  #stages button{font:500 .82rem system-ui,sans-serif;background:#fffd;border:1px solid #d3e0dc;border-radius:999px;padding:5px 11px;color:#22313a;cursor:pointer}
+  #stages button:disabled{opacity:.45;cursor:default}
+  #stages button[aria-pressed="true"]{background:#d9566f;border-color:#d9566f;color:#fff;opacity:1}
+  #panel{flex:none;max-height:42vh;overflow:auto;background:#fff;border-top:1px solid #d3e0dc;padding:12px 16px;margin-top:8px}
+  #title{font-size:1.02rem;margin-bottom:2px}
+  #text{font-size:.95rem;color:#3b4d56}
+  #fb{font-size:.92rem;margin-top:6px}
+  #fb.ok{color:#2f7d62}#fb.bad{color:#c0425b}
+  #acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .act{font:500 .95rem system-ui,sans-serif;background:#d9566f;color:#fff;border:0;border-radius:999px;padding:9px 18px;cursor:pointer}
+  .alt{background:#f1f6f4;color:#22313a;border:1px solid #d3e0dc}
+  .act.done{background:#cfeadf;border:1px solid #3f8f89;color:#22313a}
+  #panel textarea{width:100%;height:92px;margin-top:6px;font:12px ui-monospace,Consolas,monospace}
+  #panel .tool{font:500 .85rem system-ui,sans-serif;background:#fff;border:1px solid #d3e0dc;border-radius:999px;padding:5px 12px;cursor:pointer;margin:4px 4px 0 0}
+</style>
+</head>
+<body>
+<div id="viewer">
+  <div id="loading">Loading lesson…</div>
+  <div id="stage">
+    <video id="v" muted playsinline preload="auto"></video>
+    <svg id="ov" viewBox="0 0 1 1" preserveAspectRatio="none"><polygon id="poly" points=""/></svg>
+    <div id="atag"></div>
+  </div>
+</div>
+<div id="stages"></div>
+<div id="panel"><h3 id="title"></h3><p id="text"></p><p id="fb"></p><div id="acts"></div></div>
+
+<script>
+// ===== EDIT THIS PART ================================================
+var VIDEO = '../videos/heart-ischemia.mp4';
+var FPS = 29.97;
+function sec(frame) { return frame / FPS; }   // Premiere frame number -> seconds
+
+var T = { first: 0.05, zoom: sec(35), flow: sec(104), plaque: sec(208), outside: sec(331), occlusion: sec(358) };
+var STOP = { q1: sec(204), q2: sec(241) };    // the two questions: before the plaque grows, and when the thrombus starts
+
+// The apical myocardium on the first picture. Each point is [x, y] as a fraction of the picture.
+// Open this page with ?edit at the end of the address to draw it by clicking.
+var AREA = [[0.52, 0.78], [0.62, 0.76], [0.68, 0.82], [0.60, 0.88], [0.52, 0.85]];
+
+// Texts (draft: please review the medical content).
+var STAGES = [
+  { name: 'The heart', t: T.first,
+    text: 'This dark area, the apical myocardium, is heart muscle that depends on the Left Anterior Descending Artery for its blood. Let’s follow that artery.' },
+  { name: 'Zoom into the artery', t: T.zoom,
+    text: 'The Left Anterior Descending Artery runs along the front of the heart and feeds the heart muscle with oxygen-rich blood.' },
+  { name: 'Healthy blood flow', t: T.flow,
+    text: 'In a healthy artery the channel is wide open, so enough oxygen reaches the muscle with every heartbeat.' },
+  { name: 'Plaque and thrombus', t: T.plaque,
+    partial: 'Fatty deposits (plaque) build up in the artery wall and narrow the channel.',
+    text: 'Fatty deposits (plaque) build up in the artery wall and narrow the channel. If a plaque is damaged, the body forms a blood clot (a thrombus) on it, which narrows the channel even more.' },
+  { name: 'From outside', t: T.outside,
+    text: 'Seen from outside, the artery can look almost normal even though the channel inside is narrowing.' },
+  { name: 'Occlusion', t: T.occlusion,
+    text: 'When the thrombus blocks the Left Anterior Descending Artery completely, no blood reaches the muscle it feeds, including the apical myocardium. Without oxygen the muscle becomes ischemic, and if blood flow is not restored, the muscle dies (a myocardial infarction).' }
+];
+var TEXT = {
+  s1: { title: 'Step 1 · Find the area',
+        ask: 'Find the area of heart muscle that looks darker, near the apex (the bottom of the heart), and tap it.',
+        hint: 'Not there. Look near the bottom of the heart, at the apex.',
+        reveal: 'It is here, near the apex.',
+        ok: 'Yes. This is the apical myocardium.' },
+  q1: { question: 'Fatty deposits are about to build up in the artery wall. What will happen to the channel inside the artery?',
+        options: [
+          { text: 'It becomes narrower', correct: true, explain: 'Yes. As the plaque grows into the channel, less blood can pass.' },
+          { text: 'It becomes wider', correct: false, explain: 'No. Plaque grows into the channel, so it takes up space and narrows it.' },
+          { text: 'It stays the same', correct: false, explain: 'Not quite. The plaque keeps growing, so the channel does not stay the same.' }
+        ] },
+  q2: { question: 'When a plaque is damaged, the body forms a clot on it. What is this clot called?',
+        options: [
+          { text: 'Thrombus', correct: true, explain: 'Yes. A clot that forms on the plaque and stays where it formed is a thrombus.' },
+          { text: 'Embolus', correct: false, explain: 'An embolus is a clot or other material that travels through the blood. This clot stays where it formed, so it is a thrombus.' },
+          { text: 'Aneurysm', correct: false, explain: 'An aneurysm is a bulge in the wall of a vessel, not a clot.' }
+        ] },
+  order: { title: 'Last step · Put the events in order',
+           ask: 'Tap the events in the order they happen.',
+           items: ['Plaque builds up in the artery wall', 'A thrombus forms on the plaque', 'The artery is blocked', 'The muscle is starved of oxygen (ischemia)'],
+           shown: [2, 0, 3, 1],
+           hint: 'Not yet. Think about what has to happen first.' },
+  end: { title: 'What just happened',
+         text: 'The Left Anterior Descending Artery feeds the apical myocardium. Plaque narrowed the channel, a thrombus blocked it, and the muscle was starved of oxygen (ischemia). If blood flow is not restored quickly, this muscle dies (a myocardial infarction).' },
+  tag: 'Apical myocardium',
+  tagEnd: 'Apical myocardium: no blood'
+};
+// =====================================================================
+
+var $ = function (id) { return document.getElementById(id); };
+var v = $('v'), stage = $('stage'), viewer = $('viewer'), loadingEl = $('loading'), stagesEl = $('stages');
+var poly = $('poly'), atag = $('atag');
+var EDIT = new URLSearchParams(location.search).has('edit');
+var stageHandler = null, evIdx = 0, review = false, wrong = 0;
+
+function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+
+function say(o) {
+  $('title').textContent = o.title || '';
+  $('text').textContent = o.text || '';
+  $('fb').textContent = o.fb || '';
+  $('fb').className = o.fbClass || '';
+  var a = $('acts'); a.innerHTML = '';
+  (o.acts || []).forEach(function (x) {
+    var b = el('button', 'act' + (x.alt ? ' alt' : ''), x.label);
+    b.addEventListener('click', x.fn);
+    a.appendChild(b);
+  });
+}
+
+// ---- the area (polygon) ----
+function centroid() {
+  var x = 0, y = 0;
+  AREA.forEach(function (p) { x += p[0]; y += p[1]; });
+  return [x / AREA.length, y / AREA.length];
+}
+function showPoly(cls, label) {
+  poly.setAttribute('points', AREA.map(function (p) { return p[0] + ',' + p[1]; }).join(' '));
+  poly.setAttribute('class', cls);
+  if (label) {
+    var c = centroid();
+    atag.textContent = label;
+    atag.style.left = c[0] * 100 + '%';
+    atag.style.top = (c[1] * 100 - 0) + '%';
+    atag.style.display = 'block';
+  }
+}
+function hidePoly() { poly.setAttribute('class', ''); atag.style.display = 'none'; }
+function hitArea(p) {
+  var x = p.px, y = p.py, inside = false;
+  for (var i = 0, j = AREA.length - 1; i < AREA.length; j = i++) {
+    var xi = AREA[i][0], yi = AREA[i][1], xj = AREA[j][0], yj = AREA[j][1];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  var c = centroid();
+  return inside || Math.hypot((x - c[0]) * p.w, (y - c[1]) * p.h) <= 0.06 * p.w;
+}
+function point(e) { var b = stage.getBoundingClientRect(); return { px: (e.clientX - b.left) / b.width, py: (e.clientY - b.top) / b.height, w: b.width, h: b.height }; }
+stage.addEventListener('pointerup', function (e) { if (stageHandler) stageHandler(point(e)); });
+
+function seekTo(t) {
+  return new Promise(function (res) {
+    if (Math.abs(v.currentTime - t) < 0.02) return res();
+    v.addEventListener('seeked', function () { res(); }, { once: true });
+    v.currentTime = t;
+  });
+}
+function play() { v.play().catch(function () {}); }
+
+// ---- stages ----
+function buildStages() {
+  STAGES.forEach(function (s, i) {
+    var b = el('button', '', (i + 1) + '. ' + s.name);
+    b.disabled = true;
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', function () { goStage(i); });
+    stagesEl.appendChild(b);
+  });
+}
+function lockStages(lock) { [].forEach.call(stagesEl.children, function (b) { b.disabled = lock; }); }
+function showStage(i, partial) {
+  [].forEach.call(stagesEl.children, function (b, n) { b.setAttribute('aria-pressed', n === i); });
+  var s = STAGES[i];
+  say({ title: s.name, text: partial && s.partial ? s.partial : s.text });
+}
+function goStage(i) {
+  review = true; stageHandler = null; hidePoly();
+  var t = STAGES[i].t;
+  evIdx = 0;
+  while (evIdx < EVENTS.length && EVENTS[evIdx].t <= t + 0.02) evIdx++;
+  seekTo(i === 0 ? t : t + 0.02).then(function () { showStage(i); play(); });
+}
+
+// ---- events while the video plays ----
+var EVENTS = [
+  { t: STAGES[1].t, fn: function () { showStage(1); } },
+  { t: STAGES[2].t, fn: function () { showStage(2); } },
+  { t: STOP.q1, stop: true, fn: function () { ask(TEXT.q1, play); } },
+  { t: STAGES[3].t, fn: function () { showStage(3, !review); } },
+  { t: STOP.q2, stop: true, fn: function () { ask(TEXT.q2, function () { showStage(3); play(); }); } },
+  { t: STAGES[4].t, fn: function () { showStage(4); } },
+  { t: STAGES[5].t, fn: function () { showStage(5); } }
+];
+function loop() {
+  if (!v.paused) {
+    while (evIdx < EVENTS.length && v.currentTime >= EVENTS[evIdx].t) {
+      var e = EVENTS[evIdx++];
+      if (e.stop) { if (review) continue; v.pause(); e.fn(); break; }
+      e.fn();
+    }
+  }
+  requestAnimationFrame(loop);
+}
+v.addEventListener('ended', function () {
+  if (review) { say({ title: 'Review', text: 'Pick a stage to watch it again, or replay the whole lesson.', acts: [{ label: 'Replay lesson', fn: start }] }); }
+  else orderActivity();
+});
+
+// ---- a question that blocks the video until it is answered correctly ----
+function ask(q, onDone) {
+  function render(opts, fb) {
+    say({ title: 'Question', text: q.question, fb: fb || '', fbClass: fb ? 'bad' : '',
+      acts: opts.map(function (o) {
+        return { label: o.text, alt: true, fn: function () {
+          if (o.correct) say({ title: 'Question', text: q.question, fb: o.explain, fbClass: 'ok', acts: [{ label: 'Continue', fn: onDone }] });
+          else render(opts.filter(function (x) { return x !== o; }), o.explain);
+        } };
+      }) });
+  }
+  render(q.options);
+}
+
+// ---- last step: put the events in order ----
+function orderActivity() {
+  var O = TEXT.order, next = 0;
+  say({ title: O.title, text: O.ask });
+  var acts = $('acts');
+  O.shown.forEach(function (idx) {
+    var b = el('button', 'act alt', O.items[idx]);
+    b.addEventListener('click', function () {
+      if (idx === next) {
+        b.disabled = true; b.classList.add('done'); b.textContent = (next + 1) + '. ' + O.items[idx];
+        next++; $('fb').textContent = '';
+        if (next === O.items.length) closing();
+      } else { $('fb').textContent = O.hint; $('fb').className = 'bad'; }
+    });
+    acts.appendChild(b);
+  });
+}
+function closing() {
+  lockStages(false);
+  seekTo(T.first).then(function () {
+    showPoly('pulse', TEXT.tagEnd);
+    say({ title: TEXT.end.title, text: TEXT.end.text, acts: [{ label: 'Replay lesson', fn: start }] });
+  });
+}
+
+// ---- step 1: find the shape of the area ----
+function start() {
+  review = false; evIdx = 0; wrong = 0; stageHandler = null;
+  v.pause(); hidePoly(); lockStages(true);
+  [].forEach.call(stagesEl.children, function (b) { b.setAttribute('aria-pressed', 'false'); });
+  seekTo(T.first).then(function () {
+    var base = { title: TEXT.s1.title, text: TEXT.s1.ask };
+    var next = [{ label: 'Next', fn: function () { hidePoly(); showStage(0); play(); } }];
+    say(base);
+    stageHandler = function (p) {
+      if (hitArea(p)) {
+        stageHandler = null; showPoly('good', TEXT.tag);
+        say({ title: base.title, text: base.text, fb: TEXT.s1.ok, fbClass: 'ok', acts: next });
+      } else if (++wrong >= 3) {
+        stageHandler = null; showPoly('pulse', TEXT.tag);
+        say({ title: base.title, text: base.text, fb: TEXT.s1.reveal, fbClass: 'ok', acts: next });
+      } else {
+        say({ title: base.title, text: base.text, fb: TEXT.s1.hint, fbClass: 'bad' });
+      }
+    };
+  });
+}
+
+// ---- edit mode: draw the area by clicking points ----
+function buildEdit() {
+  var p = $('panel'); p.innerHTML = '';
+  p.appendChild(el('p', '', 'Edit mode. Click around the dark area (the apical myocardium) to place points, one after another around its edge.'));
+  var out = el('textarea'); out.readOnly = true;
+  var tl = el('input'); tl.type = 'range'; tl.min = 0; tl.max = 1000; tl.value = 0; tl.style.width = '100%';
+  var tr = el('p', '', 'Video length: ' + v.duration.toFixed(2) + ' s. Drag to see any moment of the video.');
+  tl.addEventListener('input', function () {
+    v.currentTime = (tl.value / 1000) * v.duration;
+    tr.textContent = 'Video time: ' + v.currentTime.toFixed(2) + ' s (of ' + v.duration.toFixed(2) + ' s)';
+  });
+  AREA.length = 0;
+  function refresh() {
+    stage.querySelectorAll('.vdot').forEach(function (d) { d.remove(); });
+    AREA.forEach(function (q) { var d = el('div', 'vdot'); d.style.left = q[0] * 100 + '%'; d.style.top = q[1] * 100 + '%'; stage.appendChild(d); });
+    if (AREA.length > 2) { poly.setAttribute('points', AREA.map(function (q) { return q[0] + ',' + q[1]; }).join(' ')); poly.setAttribute('class', 'edit'); }
+    else poly.setAttribute('class', '');
+    out.value = 'var AREA = [' + AREA.map(function (q) { return '[' + q[0] + ', ' + q[1] + ']'; }).join(', ') + '];';
+  }
+  var undo = el('button', 'tool', 'Undo last'), clear = el('button', 'tool', 'Clear'), copy = el('button', 'tool', 'Copy');
+  undo.addEventListener('click', function () { AREA.pop(); refresh(); });
+  clear.addEventListener('click', function () { AREA.length = 0; refresh(); });
+  copy.addEventListener('click', function () { out.select(); navigator.clipboard.writeText(out.value).catch(function () { document.execCommand('copy'); }); });
+  p.appendChild(undo); p.appendChild(clear); p.appendChild(copy); p.appendChild(tr); p.appendChild(tl); p.appendChild(out);
+  stageHandler = function (pt) { AREA.push([+pt.px.toFixed(3), +pt.py.toFixed(3)]); refresh(); };
+  stage.style.cursor = 'crosshair';
+  seekTo(T.first).then(refresh);
+}
+
+// ---- load ----
+function fit() {
+  var vw = v.videoWidth || 4, vh = v.videoHeight || 5;
+  var w = viewer.clientWidth - 16, h = viewer.clientHeight - 16;
+  var s = Math.min(w / vw, h / vh);
+  stage.style.width = Math.floor(vw * s) + 'px';
+  stage.style.height = Math.floor(vh * s) + 'px';
+}
+window.addEventListener('resize', fit);
+v.addEventListener('loadedmetadata', fit);
+v.addEventListener('error', function () { loadingEl.textContent = 'Could not load ' + VIDEO; });
+v.addEventListener('canplay', function () {
+  fit(); loadingEl.style.display = 'none';
+  buildStages();
+  if (EDIT) buildEdit(); else start();
+  loop();
+}, { once: true });
+v.src = VIDEO;
+</script>
+</body>
+</html>
