@@ -254,10 +254,10 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
         </article>
 
         <article class="panel" data-title="Mechanism">
-          <div class="media"><div class="ph">Add the 2D mechanism video here (morphing)</div></div>
+          <div class="media"><video src="videos/sickle-mechanism.mp4" data-autoplay loop muted playsinline controls preload="metadata"></video></div>
           <h3>Sickle cell: the mechanism</h3>
-          <p>A 2D animation explaining the mechanism behind sickle cell anemia.</p>
-          <div class="tools">2D animation</div>
+          <p>A hand-drawn, frame-by-frame 2D animation that follows sickle cell disease from inheritance to a blocked vessel: the mutated gene passed on by carrier parents, the change in hemoglobin, polymerization under low oxygen, and the deformed cells clogging the artery.</p>
+          <div class="tools">Frame-by-frame 2D animation · Premiere</div>
         </article>
 
         <article class="panel" data-title="Blood cell game">
@@ -361,6 +361,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
     current=i;
     panels.forEach(function(p,n){p.hidden=n!==i; if(n!==i){ unload(p); [].forEach.call(p.querySelectorAll('video'),function(v){v.pause()}); }});
     buttons.forEach(function(b,n){b.setAttribute('aria-selected',n===i)});
+    [].forEach.call(panels[i].querySelectorAll('video[data-autoplay]'),function(v){var r=v.play();if(r&&r.catch)r.catch(function(){})});
     if(!skip) load(panels[i]);
   }
   // Interactive / Video switch inside each panel that has .view blocks

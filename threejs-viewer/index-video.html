@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How sickle cell disease begins</title>
+<style>
+  :root {
+    --ink: #17262b;
+    --sand: #f3e3c3;
+    --sand-dim: #9fb0b4;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--ink);
+    color: var(--sand);
+    font-family: var(--serif);
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  }
+  h1 {
+    width: 100%; max-width: 1100px; margin: 0;
+    font-weight: 500; font-size: clamp(1.2rem, 3.2vw, 1.8rem); line-height: 1.25;
+  }
+  video {
+    width: 100%; max-width: 1100px; display: block;
+    border-radius: 6px; background: #e8bb7b;
+  }
+  p { width: 100%; max-width: 1100px; margin: 0; color: var(--sand-dim); font-size: 0.95rem; }
+</style>
+</head>
+<body>
+
+<h1>How sickle cell disease begins: from inherited genes to a blocked vessel</h1>
+
+<!-- Put your exported video next to this file and match the name below. -->
+<video id="film" src="sickle-cell.mp4" autoplay loop muted playsinline controls preload="auto">
+  Your browser can’t play this video.
+</video>
+
+<p>Hand-drawn frame-by-frame 2D animation. Click the video to pause, or drag the bar to move through the story.</p>
+
+<script>
+  // Respect people who prefer less motion: start paused instead of autoplaying.
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const v = document.getElementById('film');
+    v.removeAttribute('autoplay'); v.pause();
+  }
+</script>
+</body>
+</html>
