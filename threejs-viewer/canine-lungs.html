@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canine lungs – interactive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#22313a;--dim:#5a6b73;--line:#d3e0dc;--card:#fff;--bg:#f1f6f4;--coral:#d9566f;--ok:#2e8b57;
+--display:"Bricolage Grotesque",system-ui,sans-serif;--sans:"Karla",system-ui,sans-serif}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--card);color:var(--ink);font:400 1rem/1.5 var(--sans)}
+.app{display:flex;flex-direction:column;height:100%;padding:10px;gap:10px}
+.bar{display:flex;gap:8px;flex-wrap:wrap}
+.bar button{font:500 .95rem var(--sans);background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 16px;color:var(--ink);cursor:pointer}
+.bar button:hover{background:var(--bg)}
+.bar button.on{background:var(--coral);border-color:var(--coral);color:#fff}
+.box{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:14px;overflow:hidden}
+.stage{position:relative}
+.art{position:absolute;top:0;height:100%}
+.art img{width:100%;height:100%;display:block;pointer-events:none}
+svg.lab{position:absolute;inset:0;width:100%;height:100%}
+.shape{fill:rgba(255,255,255,.001);stroke:none;pointer-events:all;cursor:pointer;transition:fill .15s;vector-effect:non-scaling-stroke}
+.shape.hover{fill:rgba(255,255,255,.4);stroke:var(--coral);stroke-width:2.5px}
+.shape.sel{fill:rgba(217,86,111,.35);stroke:var(--coral);stroke-width:3px}
+.lbl{opacity:0;transition:opacity .2s;pointer-events:none}.lbl.show{opacity:1}
+.lbl polyline{stroke:var(--ink);stroke-width:1.5px;fill:none;vector-effect:non-scaling-stroke}
+.lbl circle{fill:var(--ink)}.lbl text{fill:var(--ink);font-weight:700;font-family:var(--sans)}
+.info{flex:none;height:92px;overflow:auto;border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+.info h2{font:700 1.15rem var(--display);color:var(--coral);margin-bottom:2px}
+.info p{color:var(--dim);font-size:.95rem}
+.q{font:700 1.15rem var(--display)}.q span{color:var(--coral)}
+.ok{color:var(--ok);font-weight:700}.bad{color:var(--coral);font-weight:700}
+.msg{padding:24px;text-align:center;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="bar">
+    <button id="bExplore" class="on">Explore</button>
+    <button id="bQuiz">Quiz</button>
+    <button id="bLabels">All labels</button>
+  </div>
+  <div class="box" id="box"><div class="stage" id="stage"><div class="msg">Loading…</div></div></div>
+  <div class="info" id="infoBody"></div>
+</div>
+
+<script>
+/* ===== EDIT HERE ===== */
+const IMAGE = "images/lungs/canine-lungs.png";   // the single lung picture (relative to this file)
+
+// Paste the code from lung-tracer.html here, replacing the line below:
+const SHAPES = {};
+
+const PARTS = [
+ {id:"left-caudal",  name:"Left caudal lobe",   fn:"Largest lobe of the left lung, lying over the diaphragm."},
+ {id:"left-cranial", name:"Left cranial lobe",  fn:"The left lung has only 2 lobes. This one has a cranial and a caudal part, partly separated."},
+ {id:"right-caudal", name:"Right caudal lobe",  fn:"Largest lobe of the right lung, over the diaphragm."},
+ {id:"right-middle", name:"Right middle lobe",  fn:"Lies ventrally beside the heart. In aspiration pneumonia the cranioventral lobes, including this one, are typically hit first."},
+ {id:"right-cranial",name:"Right cranial lobe", fn:"First of the 4 right lobes: cranial, middle, caudal and accessory."},
+ {id:"accessory",    name:"Accessory lobe",     fn:"Small right lobe that wraps around the caudal vena cava, tucked medially."},
+ {id:"bronchial-tree",name:"Bronchial tree",    fn:"Principal bronchi, then lobar, segmental bronchi and bronchioles, ending in alveoli where gas exchange happens."},
+ {id:"trachea",      name:"Trachea",            fn:"Airway reinforced with C-shaped cartilage rings. Divides at the carina into the two principal bronchi."}
+];
+const HOME = "<p>Hover or tap a lobe to see its name. Switch to Quiz to test yourself.</p>";
+/* ====================== */
+
+const $=id=>document.getElementById(id), stage=$("stage"), box=$("box"), infoBody=$("infoBody");
+const NS="http://www.w3.org/2000/svg", byId=id=>PARTS.find(p=>p.id===id);
+let W=0,H=0,M=0,ratio=0,mode="explore",allLabels=false,selected=null,hovered=null,target=null,score=0,tries=0,locked=false,ids=[];
+
+function fit(){ if(ratio) stage.style.width=Math.min(box.clientWidth,box.clientHeight*ratio)+"px"; }
+new ResizeObserver(fit).observe(box);
+
+function inside(pt,poly){ let c=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+  const [xi,yi]=poly[i],[xj,yj]=poly[j]; if((yi>pt[1])!==(yj>pt[1])&&pt[0]<(xj-xi)*(pt[1]-yi)/(yj-yi)+xi) c=!c; } return c; }
+function anchorOf(polys){           // a point inside the biggest shape (pixel coords)
+  let best=null,ba=-1;
+  polys.forEach(p=>{ let a=0,cx=0,cy=0; for(let i=0;i<p.length;i++){ const [x0,y0]=p[i],[x1,y1]=p[(i+1)%p.length],f=x0*y1-x1*y0; a+=f;cx+=(x0+x1)*f;cy+=(y0+y1)*f; }
+    a/=2; const c=a?[cx/(6*a),cy/(6*a)]:p[0]; if(Math.abs(a)>ba){ba=Math.abs(a);best={p,c};} });
+  let pt=best.c; if(!inside(pt,best.p)){ let d=1e9; best.p.forEach(v=>{const k=(v[0]-pt[0])**2+(v[1]-pt[1])**2; if(k<d){d=k;pt=v;}}); }
+  return [pt[0]*W,pt[1]*H];
+}
+
+async function build(){
+  const img=new Image(); img.src=IMAGE;
+  try{ await img.decode(); }catch(e){ stage.innerHTML='<div class="msg">Image not found:<br><b>'+IMAGE+'</b></div>'; return; }
+  W=img.naturalWidth; H=img.naturalHeight; M=W*0.34; ratio=(W+2*M)/H;
+  stage.innerHTML=""; stage.style.aspectRatio=(W+2*M)+"/"+H;
+  const art=document.createElement("div"); art.className="art";
+  art.style.left=(M/(W+2*M)*100)+"%"; art.style.width=(W/(W+2*M)*100)+"%"; art.appendChild(img); stage.appendChild(art);
+  const svg=document.createElementNS(NS,"svg"); svg.setAttribute("class","lab"); svg.setAttribute("viewBox",`${-M} 0 ${W+2*M} ${H}`); stage.appendChild(svg);
+
+  ids=PARTS.filter(p=>(SHAPES[p.id]||[]).length).map(p=>p.id);
+  ids.forEach(id=>SHAPES[id].forEach(poly=>{
+    const el=document.createElementNS(NS,"polygon"); el.setAttribute("class","shape"); el.dataset.id=id;
+    el.setAttribute("points",poly.map(p=>(p[0]*W)+","+(p[1]*H)).join(" ")); svg.appendChild(el); }));
+
+  const fs=W*0.03, gap=fs*2.3, items=ids.map(id=>{ const a=anchorOf(SHAPES[id]); return {id,cx:a[0],cy:a[1],side:a[0]<W/2?"L":"R"}; });
+  ["L","R"].forEach(s=>{ const g=items.filter(i=>i.side===s).sort((a,b)=>a.cy-b.cy); let last=-1e9;
+    g.forEach(i=>{i.ly=Math.max(i.cy,last+gap,fs);last=i.ly;}); const over=last-(H-fs); if(over>0) g.forEach(i=>i.ly-=over); });
+  items.forEach(i=>{ const L=i.side==="L", ex=L?-fs*.6:W+fs*.6, tx=L?-fs*1.1:W+fs*1.1, g=document.createElementNS(NS,"g");
+    g.setAttribute("class","lbl"); g.id="lbl-"+i.id;
+    g.innerHTML=`<polyline points="${i.cx},${i.cy} ${ex},${i.ly}"/><circle cx="${i.cx}" cy="${i.cy}" r="${fs*.25}"/><text x="${tx}" y="${i.ly+fs*.35}" font-size="${fs}" text-anchor="${L?"end":"start"}">${byId(i.id).name}</text>`;
+    svg.appendChild(g); });
+
+  const idOf=e=>{ const t=e.target.closest&&e.target.closest(".shape"); return t?t.dataset.id:null; };
+  svg.addEventListener("pointerover",e=>{ const id=idOf(e); if(id!==hovered){hovered=id;paint();} });
+  svg.addEventListener("pointerleave",()=>{hovered=null;paint();});
+  svg.addEventListener("click",e=>onClick(idOf(e)));
+  fit(); if(!ids.length) infoBody.innerHTML="<p>No lobes traced yet. Open lung-tracer.html, trace the lobes, then paste the code into SHAPES.</p>";
+}
+
+function paint(){
+  document.querySelectorAll(".shape").forEach(el=>{ const id=el.dataset.id;
+    el.classList.toggle("hover",mode==="explore"&&id===hovered&&id!==selected); el.classList.toggle("sel",id===selected); });
+  ids.forEach(id=>$("lbl-"+id).classList.toggle("show",allLabels||id===selected||(mode==="explore"&&id===hovered)));
+}
+function question(){ target=ids[Math.floor(Math.random()*ids.length)];
+  infoBody.innerHTML=`<div class="q">Where is the <span>${byId(target).name}</span>?</div><p id="fb">Score: ${score} / ${tries}</p>`; }
+
+function onClick(id){
+  if(locked||!ids.length) return;
+  if(!id){ if(mode==="explore"){selected=null;infoBody.innerHTML=HOME;paint();} return; }
+  const p=byId(id);
+  if(mode==="explore"){ selected=id; infoBody.innerHTML=`<h2>${p.name}</h2><p>${p.fn}</p>`; paint(); return; }
+  tries++;
+  if(id===target){ score++; selected=id; locked=true; paint();
+    infoBody.innerHTML=`<div class="ok">Correct: ${p.name}</div><p>${p.fn}</p>`;
+    setTimeout(()=>{selected=null;locked=false;paint();question();},2200);
+  } else $("fb").innerHTML=`<span class="bad">Not quite, that's the ${p.name}. Try again.</span>`;
+}
+
+function setMode(m){ mode=m;selected=null;score=tries=0;locked=false;
+  $("bExplore").classList.toggle("on",m==="explore"); $("bQuiz").classList.toggle("on",m==="quiz");
+  if(ids.length){ if(m==="explore") infoBody.innerHTML=HOME; else question(); } paint(); }
+$("bExplore").onclick=()=>setMode("explore"); $("bQuiz").onclick=()=>setMode("quiz");
+$("bLabels").onclick=e=>{allLabels=!allLabels;e.currentTarget.classList.toggle("on",allLabels);paint();};
+
+infoBody.innerHTML=HOME;
+build().then(()=>setMode("explore"));
+</script>
+</body>
+</html>
