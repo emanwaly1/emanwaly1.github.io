@@ -240,10 +240,15 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
         </article>
 
         <article class="panel" data-title="Canine lungs">
-          <div class="media"><div class="ph">Add canine lungs drawing here</div></div>
+          <div class="view" data-label="Interactive">
+            <div class="media tall"><iframe data-src="threejs-viewer/canine-lungs.html" title="Interactive canine lungs" allowfullscreen></iframe></div>
+          </div>
+          <div class="view" data-label="Image">
+            <!-- replace the placeholder with: <img src="images/canine-lungs.jpg" alt="Hand-drawn canine lungs" style="object-fit:contain"> -->
+            <div class="media tall"><img src="threejs-viewer/images/lungs/" alt="Hand-drawn canine lungs" style="object-fit:contain"></div>
           <h3>Canine lungs</h3>
-          <p>A hand-drawn illustration of the canine lungs.</p>
-          <div class="tools">Hand drawing</div>
+          <p>A hand-drawn illustration of the canine lungs, as a plain image and as an interactive version: hover or tap any lobe to see its name, or take the quiz.</p>
+          <div class="tools">Hand drawing · HTML · JavaScript</div>
         </article>
 
         <article class="panel" data-title="Vet surgery">
@@ -318,11 +323,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   </div>
 </section>
 
-<section id="contact" style="padding-top:0">git status
-git add .
-git commit -m "Add sickle cell mechanism video, 3D viewers and video page"
-git push origin main
-  <div class="wrap contact">
+<section id="contact" style="padding-top:0">  <div class="wrap contact">
     <h2>Let’s work together</h2>
     <p class="lead">Open to full-time remote roles with international teams.</p>
     <a class="big" href="mailto:emanwaly1@email.com">emanwaly1@email.com</a>
