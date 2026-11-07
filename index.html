@@ -157,6 +157,15 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
     <h2>Selected work</h2>
     <p class="lead">Pick a project to open it.</p>
 
+    <!--
+      HOW TO ADD YOUR MEDIA (inside each panel below):
+      1) Image:   replace <div class="ph">...</div> with  <img src="images/eye-1.jpg" alt="Describe the image">
+      2) YouTube: <iframe src="https://www.youtube.com/embed/VIDEO_ID" title="Eye cross-section" allowfullscreen loading="lazy"></iframe>
+      3) Video file (under ~20 MB): <video src="videos/eye.mp4" controls muted playsinline poster="images/eye-poster.jpg"></video>
+      4) Spline: <iframe src="https://my.spline.design/YOUR-SCENE-URL" title="Interactive heart" loading="lazy"></iframe>
+      Put image files in an "images" folder next to this file.
+    -->
+
     <div class="viewer">
       <div class="tabs" role="tablist" aria-label="Projects"></div>
       <div id="panels">
@@ -164,6 +173,9 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
         <article class="panel" data-title="Brain">
           <div class="view" data-label="Interactive">
             <div class="media tall"><iframe data-src="threejs-viewer/brain.html" title="Interactive 3D brain" allowfullscreen></iframe></div>
+          </div>
+          <div class="view" data-label="Video">
+            <div class="media"><div class="ph">Add brain video here (YouTube embed)</div></div>
           </div>
           <h3>The brain</h3>
           <p>Sculpted from a detailed MRI reference as a labeled 360° model with narration.</p>
@@ -173,6 +185,9 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
         <article class="panel" data-title="Heart">
           <div class="view" data-label="Interactive">
             <div class="media tall"><iframe data-src="threejs-viewer/heart.html" title="Interactive 3D heart" allowfullscreen></iframe></div>
+          </div>
+          <div class="view" data-label="Video">
+            <div class="media"><div class="ph">Add heart video here (YouTube embed)</div></div>
           </div>
           <h3>The heart</h3>
           <p>External anatomy and cross section as an interactive 3D model. Switch views, hide parts, or click any part for its name.</p>
@@ -197,6 +212,9 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
           <div class="view" data-label="Interactive">
             <div class="media tall"><iframe data-src="threejs-viewer/index2.html" title="The eye in cross-section" allowfullscreen></iframe></div>
           </div>
+          <div class="view" data-label="Video">
+            <div class="media"><div class="ph">Add eye video here (YouTube embed)</div></div>
+          </div>
           <h3>The eye in cross-section</h3>
           <p>A sculpted eye cut open to show its internal structures, lit and rendered for teaching.</p>
           <div class="tools">ZBrush sculpt · Blender render · Premiere edit</div>
@@ -205,6 +223,9 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
         <article class="panel" data-title="Humerus">
           <div class="view" data-label="Interactive">
             <div class="media tall"><iframe data-src="threejs-viewer/humerus.html" title="Interactive 3D humerus" allowfullscreen></iframe></div>
+          </div>
+          <div class="view" data-label="Video">
+            <div class="media"><div class="ph">Add humerus video here (YouTube embed)</div></div>
           </div>
           <h3>The humerus</h3>
           <p>A human humerus sculpted from reference images, from the proximal head down to the distal end.</p>
@@ -223,13 +244,22 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
             <div class="media tall"><iframe data-src="threejs-viewer/canine-lungs.html" title="Interactive canine lungs" allowfullscreen></iframe></div>
           </div>
           <div class="view" data-label="Image">
-            <div class="media tall">
-              <img src="threejs-viewer/images/canine-lungs.png" alt="Hand-drawn canine lungs" style="object-fit:contain">
-            </div>
-          </div>
+            <!-- replace the placeholder with: <img src="images/canine-lungs.jpg" alt="Hand-drawn canine lungs" style="object-fit:contain"> -->
+          <div class="media tall">
+  <img src="threejs-viewer/images/accessory, left-caudal، left-cranial، right-caudal، right-middle، right-cranial، accessory، bronchial-tree، trachea.png"
+       alt="Hand-drawn canine lungs"
+       style="object-fit: contain;">
+</div>
           <h3>Canine lungs</h3>
           <p>A hand-drawn illustration of the canine lungs, as a plain image and as an interactive version: hover or tap any lobe to see its name, or take the quiz.</p>
           <div class="tools">Hand drawing · HTML · JavaScript</div>
+        </article>
+
+        <article class="panel" data-title="Vet surgery">
+          <div class="media"><div class="ph">Add surgery illustrations here</div></div>
+          <h3>Veterinary surgery, step by step</h3>
+          <p>Instructional illustrations of two dog procedures: entropion and cherry eye.</p>
+          <div class="tools">2D illustration</div>
         </article>
 
         <article class="panel" data-title="Mechanism">
@@ -244,8 +274,15 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
             <iframe data-src="blood-game.html" title="Blood cell game" allowfullscreen></iframe>
           </div>
           <h3>Blood cell game</h3>
-          <p>An interactive game about blood cells, built in HTML and JavaScript as a playful way to learn what each cell does.</p>
+          <p>An interactive game about blood cells. Write your own description here.</p>
           <div class="tools">HTML · JavaScript</div>
+        </article>
+
+        <article class="panel" data-title="Interactive heart">
+          <div class="media"><div class="ph">Add Spline or Unity embed here</div></div>
+          <h3>Explore the heart in 3D</h3>
+          <p>Rotate the model and click any part to see its name.</p>
+          <div class="tools">Unity · Spline</div>
         </article>
 
       </div>
@@ -313,7 +350,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   var groups=[
     ['3D anatomy and animation',['Brain','Heart','Heart: septal defect','Heart: ischemia','Eye cross-section','Humerus']],
     ['Sickle cell project',['Blood flow','Mechanism','Blood cell game']],
-    ['2D and interactive',['Canine lungs']]
+    ['2D and interactive',['Canine lungs','Vet surgery','Interactive heart']]
   ];
   var panels=[], buttons=[];
   var current=0;
@@ -338,7 +375,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   // Interactive / Video switch inside each panel that has .view blocks
   all.forEach(function(p){
     var views=[].slice.call(p.querySelectorAll('.view'));
-    if(views.length<2) return;
+    if(!views.length) return;
     var bar=document.createElement('div');bar.className='subtabs';bar.setAttribute('role','tablist');
     views.forEach(function(v,n){
       v.hidden=n!==0;
