@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Canine Lung – Interactive</title>
+<style>
+:root{--bg:#faf7f5;--card:#fff;--text:#2a2320;--muted:#7a6f69;--line:#d9cfc9;--accent:#c0392b;--ok:#2e8b57;--bad:#c0392b;--glow:#ffffff}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1816;--card:#262120;--text:#f0e8e4;--muted:#a89c96;--line:#3d3532;--accent:#ff8a80;--ok:#6fcf97;--bad:#ff8a80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.wrap{max-width:1000px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 4px}.sub{color:var(--muted);font-size:14px;margin:0 0 12px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+button,.fileBtn{font:inherit;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer}
+button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:14px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stage{position:relative;width:100%}
+.art{position:absolute;top:0;height:100%}
+.art img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transition:filter .15s,opacity .2s}
+.art img.hover{filter:brightness(1.15) drop-shadow(0 0 6px var(--glow))}
+.art img.sel{filter:brightness(1.2) drop-shadow(0 0 8px var(--glow))}
+.art img.dim{opacity:.3}
+.art img.overlay{opacity:0}.art img.overlay.on{opacity:.75}
+svg.lab{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.lbl{opacity:0;transition:opacity .2s}.lbl.show{opacity:1}
+.lbl polyline{stroke:var(--text);stroke-width:1.5;fill:none}
+.lbl circle{fill:var(--text)}.lbl text{fill:var(--text);font-weight:600}
+.tag{display:inline-block;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:2px 10px;margin-bottom:8px}
+.info h2{margin:0 0 6px;font-size:18px;color:var(--accent)}.info p{margin:0 0 8px;line-height:1.5;font-size:15px}
+.q{font-size:18px;font-weight:600;margin:4px 0 8px}.fb{min-height:24px;font-weight:600}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.hint{color:var(--muted);font-size:13px;margin-top:8px}
+.msg{padding:24px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7}
+#picker{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Canine Lung – Interactive</h1>
+  <p class="sub">Hover or tap a lobe · switch to Quiz to test yourself.</p>
+  <div class="bar">
+    <button id="bExplore" class="on">Explore</button>
+    <button id="bQuiz">Quiz</button>
+    <button id="bLabels">All labels</button>
+    <button id="bOverlay" style="display:none">Pneumonia overlay</button>
+    <label class="fileBtn" for="picker">Load PNG layers…</label>
+    <input id="picker" type="file" accept="image/png" multiple>
+  </div>
+  <div class="grid">
+    <div class="panel"><div class="stage" id="stage"><div class="msg" id="msg">Loading images/ folder…</div></div></div>
+    <div class="panel info"><span class="tag" id="tag">Explore mode</span><div id="infoBody"><p>Click a lobe to see its name and notes.</p></div></div>
+  </div>
+</div>
+
+<script>
+/* ===== EDIT HERE: one entry per PNG layer (file = images/<id>.png), drawn bottom → top ===== */
+const PARTS = [
+ {id:"left-caudal",  name:"Left caudal lobe",   fn:"Largest lobe of the left lung, lying over the diaphragm."},
+ {id:"left-cranial", name:"Left cranial lobe",  fn:"The left lung has only 2 lobes. This one has a cranial and a caudal part, partly separated."},
+ {id:"right-caudal", name:"Right caudal lobe",  fn:"Largest lobe of the right lung, over the diaphragm."},
+ {id:"right-middle", name:"Right middle lobe",  fn:"Lies ventrally beside the heart. In aspiragit status
+git add .
+git commit -m "Add sickle cell mechanism video, 3D viewers and video page"
+git push origin maintion pneumonia the cranioventral lobes, including this one, are typically hit first."},
+ {id:"right-cranial",name:"Right cranial lobe", fn:"First of the 4 right lobes: cranial, middle, caudal and accessory."},
+ {id:"accessory",    name:"Accessory lobe",     fn:"Small right lobe that wraps around the caudal vena cava, tucked medially."},
+ {id:"bronchial-tree",name:"Bronchial tree",    fn:"Principal bronchi → lobar → segmental bronchi → bronchioles, ending in alveoli where gas exchange happens."},
+ {id:"trachea",      name:"Trachea",            fn:"Airway reinforced with C-shaped cartilage rings. Divides at the carina into the two principal bronchi."}
+];
+const OVERLAY_ID = "pneumonia";   // optional full-canvas PNG: images/pneumonia.png
+/* ================================================================================== */
+
+const $ = id => document.getElementById(id);
+const stage=$("stage"), infoBody=$("infoBody"), tag=$("tag");
+const SVGNS="http://www.w3.org/2000/svg";
+let W=0,H=0,M=0, mode="explore", allLabels=false, selected=null, hovered=null, target=null, score=0, tries=0, locked=false;
+let art, svg, overlayImg=null;
+
+function loadImg(url){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url;});}
+
+async function build(urlFor){           // urlFor(id) -> url or null
+  stage.innerHTML=""; hovered=selected=null;
+  const loaded=[];
+  for(const p of PARTS){ const u=urlFor(p.id); if(!u) continue; try{loaded.push({p,img:await loadImg(u)});}catch(e){} }
+  if(!loaded.length){ stage.innerHTML='<div class="msg">No layers found.<br>Put your PNGs in an <b>images/</b> folder (named like <b>left-caudal.png</b>) or press <b>Load PNG layers…</b> and select them all.</div>'; return false; }
+  W=loaded[0].img.naturalWidth; H=loaded[0].img.naturalHeight; M=W*0.26;
+  stage.style.aspectRatio=(W+2*M)+"/"+H;
+  art=document.createElement("div"); art.className="art";
+  art.style.left=(M/(W+2*M)*100)+"%"; art.style.width=(W/(W+2*M)*100)+"%";
+  stage.appendChild(art);
+  const sc=Math.min(1,700/W), cw=Math.round(W*sc), ch=Math.round(H*sc);
+  let tainted=false;
+  for(const o of loaded){
+    o.img.className=""; art.appendChild(o.img);
+    const c=document.createElement("canvas"); c.width=cw; c.height=ch;
+    const ctx=c.getContext("2d",{willReadFrequently:true}); ctx.drawImage(o.img,0,0,cw,ch);
+    try{ o.data=ctx.getImageData(0,0,cw,ch).data; }catch(e){ tainted=true; }
+    o.cw=cw; o.ch=ch; o.sc=sc; o.el=o.img;
+  }
+  const ou=urlFor(OVERLAY_ID);
+  if(ou){ try{ overlayImg=await loadImg(ou); overlayImg.className="overlay"; art.appendChild(overlayImg); $("bOverlay").style.display=""; }catch(e){} }
+  if(tainted){ stage.insertAdjacentHTML("beforeend",'<div class="msg" style="position:absolute;inset:auto 0 0 0">Browser blocked pixel reading (opened as a local file). Use <b>Load PNG layers…</b> or publish to a server.</div>'); }
+  layers=loaded; buildLabels(); return true;
+}
+let layers=[];
+
+function centroid(o){
+  if(!o.data) return null; let sx=0,sy=0,n=0;
+  for(let y=0;y<o.ch;y+=3)for(let x=0;x<o.cw;x+=3){ if(o.data[(y*o.cw+x)*4+3]>40){sx+=x;sy+=y;n++;} }
+  return n?[sx/n/o.sc, sy/n/o.sc]:null;
+}
+
+function buildLabels(){
+  svg=document.createElementNS(SVGNS,"svg"); svg.setAttribute("class","lab");
+  svg.setAttribute("viewBox",`${-M} 0 ${W+2*M} ${H}`); stage.appendChild(svg);
+  const fs=W*0.024, gap=fs*2.2, items=[];
+  layers.forEach(o=>{ const c=centroid(o); if(c) items.push({o,cx:c[0],cy:c[1],side:c[0]<W/2?"L":"R"}); });
+  ["L","R"].forEach(side=>{
+    const g=items.filter(i=>i.side===side).sort((a,b)=>a.cy-b.cy); let last=-1e9;
+    g.forEach(i=>{ i.ly=Math.max(i.cy,last+gap); last=i.ly; });
+    const over=last-(H-fs); if(over>0) g.forEach(i=>i.ly-=over);
+  });
+  items.forEach(i=>{
+    const ex=i.side==="L"?-fs*0.6:W+fs*0.6, tx=i.side==="L"?-fs*1.2:W+fs*1.2, anc=i.side==="L"?"end":"start";
+    const g=document.createElementNS(SVGNS,"g"); g.setAttribute("class","lbl"); g.id="lbl-"+i.o.p.id;
+    g.innerHTML=`<polyline points="${i.cx},${i.cy} ${ex},${i.ly}"/><circle cx="${i.cx}" cy="${i.cy}" r="${fs*0.25}"/><text x="${tx}" y="${i.ly+fs*0.35}" font-size="${fs}" text-anchor="${anc}">${i.o.p.name}</text>`;
+    svg.appendChild(g);
+  });
+}
+
+function hit(e){
+  const r=art.getBoundingClientRect(), x=(e.clientX-r.left)/r.width, y=(e.clientY-r.top)/r.height;
+  if(x<0||x>1||y<0||y>1) return null;
+  for(let k=layers.length-1;k>=0;k--){ const o=layers[k]; if(!o.data) continue;
+    const px=Math.floor(x*o.cw), py=Math.floor(y*o.ch);
+    if(o.data[(py*o.cw+px)*4+3]>40) return o.p.id; }
+  return null;
+}
+
+function paint(){
+  layers.forEach(o=>{ const id=o.p.id, e=o.el;
+    e.classList.toggle("hover", mode==="explore" && id===hovered && id!==selected);
+    e.classList.toggle("sel", id===selected);
+    e.classList.toggle("dim", selected!==null && id!==selected);
+    const L=$("lbl-"+id); if(L) L.classList.toggle("show", allLabels || id===selected || (mode==="explore" && id===hovered)); });
+}
+
+function info(id){ const p=PARTS.find(p=>p.id===id); infoBody.innerHTML=`<h2>${p.name}</h2><p>${p.fn}</p>`; }
+function question(){
+  const ids=layers.map(o=>o.p.id); target=ids[Math.floor(Math.random()*ids.length)];
+  infoBody.innerHTML=`<div class="q">Where is the <span style="color:var(--accent)">${PARTS.find(p=>p.id===target).name}</span>?</div><div class="fb" id="fb"></div><p class="hint">Score: ${score} / ${tries}</p>`;
+}
+
+function onClick(e){
+  if(locked||!art) return; const id=hit(e);
+  if(!id){ if(mode==="explore"){selected=null;infoBody.innerHTML="<p>Click a lobe to see its name and notes.</p>";paint();} return; }
+  if(mode==="explore"){ selected=id; info(id); paint(); return; }
+  tries++;
+  if(id===target){ score++; selected=id; locked=true; paint();
+    infoBody.innerHTML=`<div class="fb ok">Correct! ${PARTS.find(p=>p.id===id).name}</div><p>${PARTS.find(p=>p.id===id).fn}</p><p class="hint">Score: ${score} / ${tries}</p>`;
+    setTimeout(()=>{selected=null;locked=false;paint();question();},2000);
+  } else { $("fb").innerHTML=`<span class="bad">Not quite, that's the ${PARTS.find(p=>p.id===id).name}. Try again.</span>`; }
+}
+stage.addEventListener("click",onClick);
+stage.addEventListener("pointermove",e=>{ if(!art) return; const id=hit(e); stage.style.cursor=id?"pointer":"default"; if(id!==hovered){hovered=id;paint();} });
+stage.addEventListener("pointerleave",()=>{hovered=null;paint();});
+
+function setMode(m){ mode=m; selected=null; score=tries=0; locked=false;
+  $("bExplore").classList.toggle("on",m==="explore"); $("bQuiz").classList.toggle("on",m==="quiz");
+  tag.textContent=m==="explore"?"Explore mode":"Quiz mode";
+  if(m==="explore") infoBody.innerHTML="<p>Click a lobe to see its name and notes.</p>"; else if(layers.length) question();
+  paint(); }
+$("bExplore").onclick=()=>setMode("explore"); $("bQuiz").onclick=()=>setMode("quiz");
+$("bLabels").onclick=e=>{allLabels=!allLabels;e.currentTarget.classList.toggle("on",allLabels);paint();};
+$("bOverlay").onclick=e=>{ if(overlayImg){ const on=overlayImg.classList.toggle("on"); e.currentTarget.classList.toggle("on",on);} };
+
+$("picker").addEventListener("change",async e=>{
+  const map={}; [...e.target.files].forEach(f=>{ map[f.name.replace(/\.png$/i,"").toLowerCase()]=URL.createObjectURL(f); });
+  await build(id=>map[id.toLowerCase()]||null); setMode(mode);
+});
+
+build(id=>"images/"+id+".png").then(()=>setMode("explore"));
+</script>
+</body>
+</html>

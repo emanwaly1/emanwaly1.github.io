@@ -261,6 +261,7 @@ void main(){
   c=mix(c,vec3(.30,.04,.07),hair*.92);
   c*=1.-.12*clamp(length(g)*.6,0.,1.);
   c*=1.+.08*f*clamp(length(uPull)/120.,0.,1.);
+  c=mix(vec3(dot(c,vec3(.299,.587,.114))),c,1.08);c=(c-.5)*1.05+.5;c*=1.-.22*pow(length(v-.5)*1.25,2.);
   o=vec4(c,1.);}`;
 function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(o));return o}
 function mkTex(){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);[[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]].forEach(([a,b])=>gl.texParameteri(gl.TEXTURE_2D,a,b));return t}
@@ -286,7 +287,7 @@ const LAYERS=[
  {n:'الملتحمة (السطح المواجه للمقلة)',c:'#ea9aa0',d:'طبقة رقيقة وردية. تُشقّ ثم تُرفع وتُخاط فوق الغدة.'},
  {n:'النسيج تحت الملتحمة',c:'#f1dcc4',d:'نسيج ضام رخو كريمي اللون يظهر عند الشق والتسليخ.'},
  {n:'غضروف الجفن الثالث (T)',c:'#cfd9e6',d:'أبيض مزرق متماسك، قاع الجيب. لا يُقصّ.'},
- {n:'غدة الجفن الثالث',c:'#b01c2a',d:'تنتج 30–40% من الدموع. تُحفظ ولا تُستأصل.'},
+ {n:'غدة الجفن الثالث',c:'#b01c2a',d:'متصلة بغضروف الجفن الثالث من الداخل. تنتج 30–40% من الدموع، فتُدفع داخل الجيب وتُحفظ ولا تُستأصل ولا تُفصل.'},
  {n:'الحافة الحرة المصطبغة',c:'#35282c',d:'حافة الجفن الثالث. تُمسك لقلبه، وتلامس القرنية.'}];
 const SUT=[
  {t:'Vicryl 5-0 (polyglactin 910)',ok:1,m:'مناسب لمعظم الكلاب. قابل للامتصاص فلا يحتاج إزالة.'},
@@ -307,8 +308,8 @@ const STEPS=[
    why:'التسليخ يحرّر حافة الملتحمة لتقترب من الحافة المقابلة وتغطي الغدة.',err:'التسليخ العميق الذي يصل للغضروف أو للغدة.'},
  {id:'und2',type:'snip',tool:'scissors',title:'تسليخ الحافة الخلفية وتجهيز الجيب',text:'سلّخي الحافة الخلفية بنفس الطريقة. بعدها يظهر قاع الجيب.',get path(){return GEO.D2},after:{d2:1},post:{pk:1},get cover(){return COVER*.95},ph:'pocket',full:true,layers:[1,2],
    why:'يتكوّن جيب واسع بما يكفي لاستقبال الغدة، وقاعه غضروف الجفن الثالث.',err:'جيب ضيق لا يتّسع للغدة فتبرز من جديد.'},
- {id:'move',type:'move',tool:'bishop',title:'إدخال الغدة في الجيب',text:'امسكي الغدة برفق بملقط Bishop-Harmon وضعيها في الجيب بين الشقّين.',layers:[3,2],
-   why:'الغدة تُحفظ ولا تُستأصل: استئصالها يعرّض الكلب للجفاف (KCS).',err:'سحب الغدة بقوة أو قصّها.',onDone(){model.g='pocket'}},
+ {id:'move',type:'move',tool:'bishop',title:'دفع الغدة داخل الجيب',text:'الغدة متصلة بغضروف الجفن الثالث من الداخل ولا تنفصل. امسكيها برفق بملقط Bishop-Harmon وادفعيها داخل الجيب بين الشقّين، وستلاحظين أنها تظل متصلة بقاعدتها.',layers:[3,2],
+   why:'الغدة تظل متصلة بقاعدتها على الغضروف: تُدفع وتُدفن في الجيب فقط، فاستئصالها يعرّض الكلب للجفاف (KCS).',err:'سحب الغدة بقوة أو قصّها أو محاولة فصلها عن قاعدتها.',onDone(){model.g='pocket'}},
  {id:'k1',type:'points',tool:'needle',title:'عقدة التثبيت الأولى',text:'ابدئي بعقدة تثبيت عند طرف الجيب.',get targets(){return[GEO.K1]},tol:70,danger:true,layers:[0],
    why:'تُربط العقدة على السطح الجفني بعيدًا عن القرنية كي لا تحتك بها.',err:'وضع العقدة ناحية القرنية.',onTarget(){model.kn1=1;fadeTo(sc(model),300)}},
  {id:'sew',type:'points',tool:'needle',title:'خياطة مستمرة بسيطة',text:'اعملي غرزًا متتالية بالترتيب بين الحافتين. كل غرزة تقرّب الحافتين وتغطي الغدة.',get targets(){return GEO.BITES},tolFix:40,layers:[0],
@@ -410,17 +411,22 @@ function frame(t){const dt=Math.min(.05,(t-tPrev)/1000);tPrev=t;
   drawOver();renderGL();requestAnimationFrame(frame)}
 
 /* ================= overlay ================= */
+function pedicle(x,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,nx=-dy/l,ny=dx/l,w1=26,w2=52,mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2;
+  x.save();const g=x.createLinearGradient(a[0],a[1],b[0],b[1]);g.addColorStop(0,'#7e0f1d');g.addColorStop(1,'#b3182a');x.fillStyle=g;x.shadowColor='rgba(60,10,20,.4)';x.shadowBlur=14;
+  x.beginPath();x.moveTo(a[0]+nx*w1,a[1]+ny*w1);x.quadraticCurveTo(mx+nx*w1*.55,my+ny*w1*.55,b[0]+nx*w2,b[1]+ny*w2);x.lineTo(b[0]-nx*w2,b[1]-ny*w2);x.quadraticCurveTo(mx-nx*w1*.55,my-ny*w1*.55,a[0]-nx*w1,a[1]-ny*w1);x.closePath();x.fill();x.beginPath();x.ellipse(a[0],a[1],w1*1.25,w1*.6,0,0,7);x.fillStyle='#6d0c19';x.fill();x.restore()}
 function drawOver(){const x=tctx;x.clearRect(0,0,W,H);if(calib){drawCalib(x);return}const s=STEPS[si],on=s&&!st.done;
   if(on&&(guided||performance.now()<hintUntil))drawGuide(x,s);
   if(model.ev&&on&&s.danger&&guided){x.save();x.fillStyle='rgba(217,86,111,.16)';const z=PM?GEO.CORNEA:null;if(z){x.beginPath();x.arc(z[0],z[1],170,0,7);x.fill()}else if(!PM)x.fillRect(240,120,1120,170);x.fillStyle='#b3243c';x.font='700 24px "Segoe UI",Tahoma,sans-serif';x.textAlign='center';if(z||!PM)x.fillText('ناحية القرنية: لا تضعي العقدة هنا',z?z[0]:800,z?z[1]:215);x.restore()}
   if(PM&&model.ev&&!(model.kn2||model.k>=GEO.BITES.length)){x.save();x.fillStyle=TH;x.strokeStyle='#fff';x.lineWidth=2;const dt_=p=>{x.beginPath();x.arc(p[0],p[1],8,0,7);x.fill();x.stroke()};if(model.kn1)dt_(GEO.K1);for(let i=0;i<model.k;i++)dt_(GEO.BITES[i]);if(model.kn2)dt_(GEO.K2);x.restore()}
-  if(held){const g=toolById('graefe');x.save();x.globalAlpha=held.op==null?1:held.op;x.translate(held.x,held.y);x.rotate(held.ang);if(held.flip)x.scale(1,-1);
+  if(held){const g=toolById('graefe');x.save();x.globalAlpha=(held.op==null?1:held.op)*.6;x.translate(held.x,held.y);x.rotate(held.ang);if(held.flip)x.scale(1,-1);
     {const w=g.w*toolScale,ox=-g.tx*w,gr=x.createLinearGradient(0,-40,0,40);gr.addColorStop(0,'#e4e9ec');gr.addColorStop(.5,'#9aa5ab');gr.addColorStop(1,'#59656c');x.fillStyle=gr;
      for(const q of[-1,1]){x.beginPath();x.moveTo(ox+w*.06,q*3);x.lineTo(ox+w*.06,q*16);x.lineTo(ox-2200,q*70);x.lineTo(ox-2200,q*52);x.closePath();x.fill()}}
-    sprite(x,g.img,g,0);x.restore()}
+    sprite(x,g.img,g,0);x.restore();
+    x.save();x.globalAlpha=held.op==null?1:held.op;x.strokeStyle='#3f8f89';x.lineWidth=4;x.beginPath();x.arc(held.x,held.y,17,0,7);x.stroke();x.font='700 22px "Segoe UI",Tahoma,sans-serif';x.textAlign='center';x.lineWidth=5;x.strokeStyle='#fff';x.fillStyle='#2b6e69';x.strokeText('ملقط التثبيت',held.x,held.y-28);x.fillText('ملقط التثبيت',held.x,held.y-28);x.restore()}
   if(on&&s.type==='cut'&&st.trail.length>1){for(let i=1;i<st.trail.length;i++){const q=st.trail[i];x.strokeStyle=q.ok?'rgba(52,170,120,.9)':'rgba(217,86,111,.95)';x.lineWidth=3;x.beginPath();x.moveTo(st.trail[i-1].x,st.trail[i-1].y);x.lineTo(q.x,q.y);x.stroke()}}
   pings.forEach(p=>{x.strokeStyle=p.col;x.globalAlpha=1-p.t/.6;x.lineWidth=5;x.beginPath();x.arc(p.x,p.y,14+p.t*130,0,7);x.stroke();x.globalAlpha=1});
-  if(carry&&pos&&!PM){gland(x,pos.x,pos.y+10,150,84,true)}
+  if(carry&&pos&&!PM){const A=GEO.GB,vx=pos.x-A[0],vy=pos.y+10-A[1],l=Math.hypot(vx,vy)||1,m=Math.min(l,300),gp=[A[0]+vx/l*m,A[1]+vy/l*m],k=clamp(m/272,0,1);
+    pedicle(x,A,gp);gland(x,gp[0],gp[1],lerp(128,190,k),lerp(62,105,k),k>.5)}
   if(!pos)return;const t=T();
   if(t.id==='needle'&&model.kn1&&!model.kn2){const a=model.k>0?GEO.BITES[model.k-1]:GEO.K1;x.strokeStyle=TH;x.lineWidth=4;x.lineCap='round';x.beginPath();x.moveTo(a[0],a[1]);x.quadraticCurveTo((a[0]+pos.x)/2,Math.max(a[1],pos.y)+40,pos.x,pos.y);x.stroke()}
   const shd=pressed?[5,8]:[13,22],op=SPLIT.includes(t.beh)?open:0;
