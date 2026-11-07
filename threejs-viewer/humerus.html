@@ -25,6 +25,13 @@
   #edit{position:absolute;left:50%;top:12px;transform:translateX(-50%);width:min(520px,calc(100% - 260px));min-width:260px;background:#fff;border:2px solid #d9566f;border-radius:14px;padding:10px 12px;z-index:4;font-size:.85rem}
   #edit textarea{width:100%;height:96px;margin-top:6px;font:12px ui-monospace,Consolas,monospace}
   #edit button{font:500 .85rem system-ui,sans-serif;border:1px solid #d3e0dc;background:#fff;border-radius:999px;padding:4px 12px;cursor:pointer;margin-right:4px}
+@supports (height:100dvh){body{height:100dvh}}
+@media (max-width:700px){
+  #parts{left:8px;top:8px;max-width:calc(100% - 16px);max-height:55%}
+  #label{left:8px;bottom:8px;max-width:calc(100% - 112px);font-size:.92rem;padding:7px 14px}
+  #reset{right:8px;bottom:8px;padding:7px 12px}
+  .pin{width:32px;height:32px;margin:-16px 0 0 -16px;font-size:.9rem}
+}
 </style>
 </head>
 <body>
@@ -121,6 +128,7 @@ function select(i) {
 
 function flyTo(i) {
   select(i);
+  if (innerWidth < 700) document.getElementById('parts').open = false;
   const p = parts[i];
   fly = {
     t0: performance.now(),

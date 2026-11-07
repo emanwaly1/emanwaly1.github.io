@@ -19,7 +19,7 @@
   .ring.pulse{border-color:#ffd166;animation:pulse 1s ease-in-out infinite}
   @keyframes pulse{50%{transform:translate(-50%,-50%) scale(1.25)}}
   #loading{position:absolute;inset:0;display:grid;place-items:center;background:#f1f6f4;z-index:9;font-size:1.1rem;text-align:center;padding:20px}
-  #panel{flex:none;max-height:44vh;overflow:auto;background:#fff;border-top:1px solid #d3e0dc;padding:12px 16px}
+  #panel{flex:none;max-height:44vh;max-height:44dvh;overflow:auto;background:#fff;border-top:1px solid #d3e0dc;padding:12px 16px}
   .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#d3e0dc;margin-right:6px}
   .dot.on{background:#d9566f}.dot.done{background:#3f8f89}
   #title{font-size:1.02rem;margin:6px 0 2px}
@@ -32,6 +32,8 @@
   #panel textarea{width:100%;height:92px;margin-top:6px;font:12px ui-monospace,Consolas,monospace}
   #panel .tool{font:500 .85rem system-ui,sans-serif;background:#fff;border:1px solid #d3e0dc;border-radius:999px;padding:5px 12px;cursor:pointer;margin:4px 4px 0 0}
   #panel .tool[aria-pressed="true"]{background:#d9566f;border-color:#d9566f;color:#fff}
+@supports (height:100dvh){body{height:100dvh}}
+@media (max-width:700px){#panel{padding:10px 12px}.act{padding:10px 16px}}
 </style>
 </head>
 <body>

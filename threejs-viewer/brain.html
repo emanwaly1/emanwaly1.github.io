@@ -17,12 +17,25 @@
   #panel label{display:flex;align-items:center;gap:8px;cursor:pointer}
   #panel .sep{height:1px;background:#d3e0dc;margin:4px 0}
   #panel input[type=range]{width:100%}
+@supports (height:100dvh){body{height:100dvh}}
+#pbody{display:flex;flex-direction:column;gap:6px}
+#ptog{display:none}
+@media (max-width:700px){
+  #ptog{display:block;font:600 .9rem system-ui,sans-serif;background:#fff;border:1px solid #d3e0dc;border-radius:999px;padding:6px 14px;color:#22313a;cursor:pointer;align-self:flex-start}
+  #panel{top:8px;left:8px;padding:6px;max-width:230px}
+  #pbody{display:none;padding:4px 6px 6px}
+  #panel.open #pbody{display:flex}
+  #hint{display:none}
+  #label{left:8px;right:8px;bottom:8px;text-align:center;border-radius:14px;padding:8px 12px;font-size:.95rem}
+}
 </style>
 </head>
 <body>
 <div id="viewer">
   <div id="loading">Loading brain… 0%</div>
   <div id="panel">
+    <button id="ptog" type="button">Layers ▾</button>
+    <div id="pbody">
     <label><input type="checkbox" data-group="arteries" checked> Arteries</label>
     <label><input type="checkbox" data-group="nerves" checked> Nerves</label>
     <label><input type="checkbox" data-group="sinus" checked> Dural venous sinuses</label>
@@ -33,6 +46,7 @@
     <label style="flex-direction:column;align-items:stretch">Lobes transparency
       <input type="range" id="opacity" min="0.1" max="1" step="0.05" value="1">
     </label>
+    </div>
   </div>
   <div id="label">Click a part to see its name</div>
   <div id="hint">Drag to rotate · Scroll to zoom</div>
@@ -218,5 +232,6 @@ renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, came
   window.addEventListener('unhandledrejection',function(e){ say('Error: '+((e.reason&&e.reason.message)||e.reason)); });
 })();
 </script>
+<script>document.getElementById('ptog').addEventListener('click',function(){document.getElementById('panel').classList.toggle('open')});</script>
 </body>
 </html>

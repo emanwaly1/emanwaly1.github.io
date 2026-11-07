@@ -29,7 +29,7 @@ svg.lab{position:absolute;inset:0;width:100%;height:100%}
 .lbl{opacity:0;transition:opacity .2s;pointer-events:none}.lbl.show{opacity:1}
 .lbl polyline{stroke:var(--ink);stroke-width:1.5px;fill:none;vector-effect:non-scaling-stroke}
 .lbl circle{fill:var(--ink)}.lbl text{fill:var(--ink);font-weight:700;font-family:var(--sans)}
-.info{flex:none;height:92px;overflow:auto;border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+.info{flex:none;min-height:72px;max-height:34%;overflow:auto;border:1px solid var(--line);border-radius:14px;padding:10px 14px}
 .info h2{font:700 1.15rem var(--display);color:var(--coral);margin-bottom:2px}
 .info p{color:var(--dim);font-size:.95rem}
 .q{font:700 1.15rem var(--display)}.q span{color:var(--coral)}
@@ -39,6 +39,7 @@ svg.lab{position:absolute;inset:0;width:100%;height:100%}
 body.plain .bar,body.plain .info{display:none}
 body.plain .app{padding:0}
 body.plain .box{border-radius:12px}
+@supports (height:100dvh){body{height:100dvh}}
 </style>
 </head>
 <body>
@@ -75,6 +76,9 @@ const PARTS = [
  {id:"bronchial-tree",name:"Bronchial tree",    fn:"Principal bronchi, then lobar, segmental bronchi and bronchioles, ending in alveoli where gas exchange happens.", thin:true},
  {id:"trachea",      name:"Trachea",            fn:"Airway reinforced with C-shaped cartilage rings. Divides at the carina into the two principal bronchi.", thin:true}
 ];
+// short names, used for the side labels on small screens
+const SHORT={"left-caudal":"L caudal","left-cranial":"L cranial","right-caudal":"R caudal","right-middle":"R middle","right-cranial":"R cranial","accessory":"Accessory","bronchial-tree":"Bronchi","trachea":"Trachea"};
+PARTS.forEach(p=>p.short=SHORT[p.id]||p.name);
 const HOME = "<p>Hover or tap a lobe to see its name. Switch to Quiz to test yourself.</p>";
 /* ====================== */
 
@@ -175,13 +179,14 @@ async function build(){
 
   const svg=document.createElementNS(NS,"svg"); svg.setAttribute("class","lab"); svg.setAttribute("viewBox",`${VX-M} ${VY} ${VW+2*M} ${VH}`); stage.appendChild(svg);
 
-  const fs=VW*0.03, gap=fs*2.3, items=[], top=VY+fs, bot=VY+VH-fs;
+  const stagePx=Math.min(box.clientWidth,box.clientHeight*ratio), narrow=stagePx<560;
+  const fs=narrow?Math.max(VW*0.03,10*(VW+2*M)/stagePx):VW*0.03, gap=fs*2.3, items=[], top=VY+fs, bot=VY+VH-fs;
   ids.forEach(id=>{ const a=anchorOf(alpha[id]); if(a){ anchors[id]=a; items.push({id,cx:a[0],cy:a[1],side:a[0]<VX+VW/2?"L":"R"}); } });
   ["L","R"].forEach(s=>{ const g=items.filter(i=>i.side===s).sort((a,b)=>a.cy-b.cy); let last=-1e9;
     g.forEach(i=>{i.ly=Math.max(i.cy,last+gap,top);last=i.ly;}); const over=last-bot; if(over>0) g.forEach(i=>i.ly-=over); });
   items.forEach(i=>{ const L=i.side==="L", ex=L?VX-fs*.6:VX+VW+fs*.6, tx=L?VX-fs*1.1:VX+VW+fs*1.1, g=document.createElementNS(NS,"g");
     g.setAttribute("class","lbl"); g.id="lbl-"+i.id;
-    g.innerHTML=`<polyline points="${i.cx},${i.cy} ${ex},${i.ly}"/><circle cx="${i.cx}" cy="${i.cy}" r="${fs*.25}"/><text x="${tx}" y="${i.ly+fs*.35}" font-size="${fs}" text-anchor="${L?"end":"start"}">${byId(i.id).name}</text>`;
+    g.innerHTML=`<polyline points="${i.cx},${i.cy} ${ex},${i.ly}"/><circle cx="${i.cx}" cy="${i.cy}" r="${fs*.25}"/><text x="${tx}" y="${i.ly+fs*.35}" font-size="${fs}" text-anchor="${L?"end":"start"}">${narrow?byId(i.id).short:byId(i.id).name}</text>`;
     svg.appendChild(g); });
 
   const pick=e=>{ const r=svg.getBoundingClientRect();
