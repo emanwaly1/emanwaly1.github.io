@@ -21,11 +21,10 @@ body{background:var(--card);color:var(--ink);font:400 1rem/1.5 var(--sans)}
 .box{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:14px;overflow:hidden}
 .stage{position:relative}
 .art{position:absolute;top:0;height:100%}
-.art img{width:100%;height:100%;display:block;pointer-events:none}
+.layer{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;transition:filter .15s}
+.layer.hover{filter:drop-shadow(0 0 2px var(--coral)) drop-shadow(0 0 5px var(--coral)) brightness(1.1)}
+.layer.sel{filter:drop-shadow(0 0 3px var(--coral)) drop-shadow(0 0 7px var(--coral)) saturate(1.5)}
 svg.lab{position:absolute;inset:0;width:100%;height:100%}
-.shape{fill:rgba(255,255,255,.001);stroke:none;pointer-events:all;cursor:pointer;transition:fill .15s;vector-effect:non-scaling-stroke}
-.shape.hover{fill:rgba(255,255,255,.4);stroke:var(--coral);stroke-width:2.5px}
-.shape.sel{fill:rgba(217,86,111,.35);stroke:var(--coral);stroke-width:3px}
 .lbl{opacity:0;transition:opacity .2s;pointer-events:none}.lbl.show{opacity:1}
 .lbl polyline{stroke:var(--ink);stroke-width:1.5px;fill:none;vector-effect:non-scaling-stroke}
 .lbl circle{fill:var(--ink)}.lbl text{fill:var(--ink);font-weight:700;font-family:var(--sans)}
@@ -35,6 +34,10 @@ svg.lab{position:absolute;inset:0;width:100%;height:100%}
 .q{font:700 1.15rem var(--display)}.q span{color:var(--coral)}
 .ok{color:var(--ok);font-weight:700}.bad{color:var(--coral);font-weight:700}
 .msg{padding:24px;text-align:center;color:var(--dim)}
+/* plain mode (?view=plain): just the picture, no controls */
+body.plain .bar,body.plain .info{display:none}
+body.plain .app{padding:0}
+body.plain .box{border-radius:12px}
 </style>
 </head>
 <body>
@@ -50,11 +53,13 @@ svg.lab{position:absolute;inset:0;width:100%;height:100%}
 
 <script>
 /* ===== EDIT HERE ===== */
-const IMAGE = "images/lungs/canine-lungs.png";   // the single lung picture (relative to this file)
+// Folder with one transparent picture per part (relative to this file).
+// Each file must be named exactly like the "id" below: left-caudal.png, trachea.png, ...
+// All pictures must have the SAME canvas size (export every layer at the full canvas size).
+const FOLDER = "images/";
+const EXTS = ["png","webp"];
 
-// Paste the code from lung-tracer.html here, replacing the line below:
-const SHAPES = {};
-
+// Listed from the bottom layer to the top layer.
 const PARTS = [
  {id:"left-caudal",  name:"Left caudal lobe",   fn:"Largest lobe of the left lung, lying over the diaphragm."},
  {id:"left-cranial", name:"Left cranial lobe",  fn:"The left lung has only 2 lobes. This one has a cranial and a caudal part, partly separated."},
@@ -62,44 +67,99 @@ const PARTS = [
  {id:"right-middle", name:"Right middle lobe",  fn:"Lies ventrally beside the heart. In aspiration pneumonia the cranioventral lobes, including this one, are typically hit first."},
  {id:"right-cranial",name:"Right cranial lobe", fn:"First of the 4 right lobes: cranial, middle, caudal and accessory."},
  {id:"accessory",    name:"Accessory lobe",     fn:"Small right lobe that wraps around the caudal vena cava, tucked medially."},
- {id:"bronchial-tree",name:"Bronchial tree",    fn:"Principal bronchi, then lobar, segmental bronchi and bronchioles, ending in alveoli where gas exchange happens."},
- {id:"trachea",      name:"Trachea",            fn:"Airway reinforced with C-shaped cartilage rings. Divides at the carina into the two principal bronchi."}
+ {id:"bronchial-tree",name:"Bronchial tree",    fn:"Principal bronchi, then lobar, segmental bronchi and bronchioles, ending in alveoli where gas exchange happens.", thin:true},
+ {id:"trachea",      name:"Trachea",            fn:"Airway reinforced with C-shaped cartilage rings. Divides at the carina into the two principal bronchi.", thin:true}
 ];
 const HOME = "<p>Hover or tap a lobe to see its name. Switch to Quiz to test yourself.</p>";
 /* ====================== */
 
+const PLAIN = new URLSearchParams(location.search).get("view")==="plain";
+if(PLAIN) document.body.classList.add("plain");
+
 const $=id=>document.getElementById(id), stage=$("stage"), box=$("box"), infoBody=$("infoBody");
 const NS="http://www.w3.org/2000/svg", byId=id=>PARTS.find(p=>p.id===id);
-let W=0,H=0,M=0,ratio=0,mode="explore",allLabels=false,selected=null,hovered=null,target=null,score=0,tries=0,locked=false,ids=[];
+let W=0,H=0,M=0,ratio=0,S=1,AW=0,AH=0;
+let mode="explore",allLabels=false,selected=null,hovered=null,target=null,score=0,tries=0,locked=false,ids=[];
+const alpha={}, anchors={}, layers={};
 
 function fit(){ if(ratio) stage.style.width=Math.min(box.clientWidth,box.clientHeight*ratio)+"px"; }
 new ResizeObserver(fit).observe(box);
 
-function inside(pt,poly){ let c=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){
-  const [xi,yi]=poly[i],[xj,yj]=poly[j]; if((yi>pt[1])!==(yj>pt[1])&&pt[0]<(xj-xi)*(pt[1]-yi)/(yj-yi)+xi) c=!c; } return c; }
-function anchorOf(polys){           // a point inside the biggest shape (pixel coords)
-  let best=null,ba=-1;
-  polys.forEach(p=>{ let a=0,cx=0,cy=0; for(let i=0;i<p.length;i++){ const [x0,y0]=p[i],[x1,y1]=p[(i+1)%p.length],f=x0*y1-x1*y0; a+=f;cx+=(x0+x1)*f;cy+=(y0+y1)*f; }
-    a/=2; const c=a?[cx/(6*a),cy/(6*a)]:p[0]; if(Math.abs(a)>ba){ba=Math.abs(a);best={p,c};} });
-  let pt=best.c; if(!inside(pt,best.p)){ let d=1e9; best.p.forEach(v=>{const k=(v[0]-pt[0])**2+(v[1]-pt[1])**2; if(k<d){d=k;pt=v;}}); }
-  return [pt[0]*W,pt[1]*H];
+function loadImg(id){
+  return new Promise(res=>{
+    let k=0;
+    (function next(){
+      if(k>=EXTS.length) return res(null);
+      const im=new Image(); im.onload=()=>res(im); im.onerror=()=>{k++;next();};
+      im.src=FOLDER+id+"."+EXTS[k];
+    })();
+  });
+}
+
+// Alpha map of one picture, at reduced size (fast hit-testing). Returns null if the browser blocks pixel reading.
+function makeAlpha(im){
+  const c=document.createElement("canvas"); c.width=AW; c.height=AH;
+  const g=c.getContext("2d",{willReadFrequently:true}); g.drawImage(im,0,0,AW,AH);
+  let d; try{ d=g.getImageData(0,0,AW,AH).data; }catch(e){ return null; }
+  const a=new Uint8Array(AW*AH); for(let i=0;i<a.length;i++) a[i]=d[i*4+3];
+  return a;
+}
+// A point inside the part (natural pixel coords): centroid, snapped to the nearest opaque pixel.
+function anchorOf(a){
+  let n=0,sx=0,sy=0;
+  for(let y=0;y<AH;y++) for(let x=0;x<AW;x++) if(a[y*AW+x]>40){n++;sx+=x;sy+=y;}
+  if(!n) return null;
+  let cx=Math.round(sx/n), cy=Math.round(sy/n);
+  if(a[cy*AW+cx]<=40){
+    let best=1e18;
+    for(let y=0;y<AH;y++) for(let x=0;x<AW;x++) if(a[y*AW+x]>40){ const k=(x-cx)**2+(y-cy)**2; if(k<best){best=k;cx=x;cy=y;} }
+  }
+  return [cx/S,cy/S];
+}
+
+function hitAt(x,y){                       // x,y in natural pixel coords
+  const ax=Math.round(x*S), ay=Math.round(y*S);
+  if(ax<0||ay<0||ax>=AW||ay>=AH) return null;
+  for(let i=ids.length-1;i>=0;i--){ const id=ids[i]; if(alpha[id][ay*AW+ax]>30) return id; }
+  // thin parts (bronchi, trachea) are hard to hit exactly: allow a small margin
+  const r=Math.max(3,Math.round(AW*0.012));
+  for(let i=ids.length-1;i>=0;i--){ const id=ids[i]; if(!byId(id).thin) continue; const a=alpha[id];
+    for(let dy=-r;dy<=r;dy++){ const yy=ay+dy; if(yy<0||yy>=AH) continue;
+      for(let dx=-r;dx<=r;dx++){ const xx=ax+dx; if(xx<0||xx>=AW) continue; if(a[yy*AW+xx]>30) return id; } } }
+  return null;
 }
 
 async function build(){
-  const img=new Image(); img.src=IMAGE;
-  try{ await img.decode(); }catch(e){ stage.innerHTML='<div class="msg">Image not found:<br><b>'+IMAGE+'</b></div>'; return; }
-  W=img.naturalWidth; H=img.naturalHeight; M=W*0.34; ratio=(W+2*M)/H;
+  const loaded=await Promise.all(PARTS.map(p=>loadImg(p.id).then(im=>({p,im}))));
+  const ok=loaded.filter(o=>o.im), missing=loaded.filter(o=>!o.im).map(o=>o.p.id);
+  if(!ok.length){ stage.innerHTML='<div class="msg">No pictures found in <b>'+FOLDER+'</b><br>Expected files like <b>'+FOLDER+'left-caudal.png</b></div>'; return; }
+  W=ok[0].im.naturalWidth; H=ok[0].im.naturalHeight;
+  const odd=ok.filter(o=>o.im.naturalWidth!==W||o.im.naturalHeight!==H).map(o=>o.p.id);
+  M=W*0.34; ratio=(W+2*M)/H;
+  S=Math.min(1,900/W); AW=Math.round(W*S); AH=Math.round(H*S);
+
   stage.innerHTML=""; stage.style.aspectRatio=(W+2*M)+"/"+H;
   const art=document.createElement("div"); art.className="art";
-  art.style.left=(M/(W+2*M)*100)+"%"; art.style.width=(W/(W+2*M)*100)+"%"; art.appendChild(img); stage.appendChild(art);
+  art.style.left=(M/(W+2*M)*100)+"%"; art.style.width=(W/(W+2*M)*100)+"%"; stage.appendChild(art);
+  ok.forEach(o=>{ o.im.className="layer"; o.im.alt=""; o.im.draggable=false; art.appendChild(o.im); layers[o.p.id]=o.im; });
+
+  if(odd.length||missing.length){
+    let t=""; if(missing.length) t+="Missing pictures: "+missing.join(", ")+". ";
+    if(odd.length) t+="These pictures have a different size from the others: "+odd.join(", ")+". Export every layer at the same full canvas size.";
+    infoBody.innerHTML="<p class='bad'>"+t+"</p>"; if(odd.length) return;
+  }
+  if(PLAIN) return;
+
+  // alpha maps (needs the page to be served over http/https, not opened as a local file)
+  for(const o of ok){ const a=makeAlpha(o.im); if(!a){
+      infoBody.innerHTML="<p class='bad'>The browser blocks reading the pictures when the page is opened from a local file. Run it through GitHub Pages or a local server (e.g. VS Code Live Server) and the hover will work.</p>"; return; }
+    alpha[o.p.id]=a; }
+  ids=ok.map(o=>o.p.id);
+
   const svg=document.createElementNS(NS,"svg"); svg.setAttribute("class","lab"); svg.setAttribute("viewBox",`${-M} 0 ${W+2*M} ${H}`); stage.appendChild(svg);
 
-  ids=PARTS.filter(p=>(SHAPES[p.id]||[]).length).map(p=>p.id);
-  ids.forEach(id=>SHAPES[id].forEach(poly=>{
-    const el=document.createElementNS(NS,"polygon"); el.setAttribute("class","shape"); el.dataset.id=id;
-    el.setAttribute("points",poly.map(p=>(p[0]*W)+","+(p[1]*H)).join(" ")); svg.appendChild(el); }));
-
-  const fs=W*0.03, gap=fs*2.3, items=ids.map(id=>{ const a=anchorOf(SHAPES[id]); return {id,cx:a[0],cy:a[1],side:a[0]<W/2?"L":"R"}; });
+  const fs=W*0.03, gap=fs*2.3, items=[];
+  ids.forEach(id=>{ const a=anchorOf(alpha[id]); if(a){ anchors[id]=a; items.push({id,cx:a[0],cy:a[1],side:a[0]<W/2?"L":"R"}); } });
   ["L","R"].forEach(s=>{ const g=items.filter(i=>i.side===s).sort((a,b)=>a.cy-b.cy); let last=-1e9;
     g.forEach(i=>{i.ly=Math.max(i.cy,last+gap,fs);last=i.ly;}); const over=last-(H-fs); if(over>0) g.forEach(i=>i.ly-=over); });
   items.forEach(i=>{ const L=i.side==="L", ex=L?-fs*.6:W+fs*.6, tx=L?-fs*1.1:W+fs*1.1, g=document.createElementNS(NS,"g");
@@ -107,17 +167,18 @@ async function build(){
     g.innerHTML=`<polyline points="${i.cx},${i.cy} ${ex},${i.ly}"/><circle cx="${i.cx}" cy="${i.cy}" r="${fs*.25}"/><text x="${tx}" y="${i.ly+fs*.35}" font-size="${fs}" text-anchor="${L?"end":"start"}">${byId(i.id).name}</text>`;
     svg.appendChild(g); });
 
-  const idOf=e=>{ const t=e.target.closest&&e.target.closest(".shape"); return t?t.dataset.id:null; };
-  svg.addEventListener("pointerover",e=>{ const id=idOf(e); if(id!==hovered){hovered=id;paint();} });
+  const pick=e=>{ const r=svg.getBoundingClientRect();
+    return hitAt(((e.clientX-r.left)/r.width*(W+2*M))-M, (e.clientY-r.top)/r.height*H); };
+  svg.addEventListener("pointermove",e=>{ const id=pick(e); svg.style.cursor=id?"pointer":"default"; if(id!==hovered){hovered=id;paint();} });
   svg.addEventListener("pointerleave",()=>{hovered=null;paint();});
-  svg.addEventListener("click",e=>onClick(idOf(e)));
-  fit(); if(!ids.length) infoBody.innerHTML="<p>No lobes traced yet. Open lung-tracer.html, trace the lobes, then paste the code into SHAPES.</p>";
+  svg.addEventListener("click",e=>onClick(pick(e)));
+  fit();
 }
 
 function paint(){
-  document.querySelectorAll(".shape").forEach(el=>{ const id=el.dataset.id;
+  Object.keys(layers).forEach(id=>{ const el=layers[id];
     el.classList.toggle("hover",mode==="explore"&&id===hovered&&id!==selected); el.classList.toggle("sel",id===selected); });
-  ids.forEach(id=>$("lbl-"+id).classList.toggle("show",allLabels||id===selected||(mode==="explore"&&id===hovered)));
+  ids.forEach(id=>{ const l=$("lbl-"+id); if(l) l.classList.toggle("show",allLabels||id===selected||(mode==="explore"&&id===hovered)); });
 }
 function question(){ target=ids[Math.floor(Math.random()*ids.length)];
   infoBody.innerHTML=`<div class="q">Where is the <span>${byId(target).name}</span>?</div><p id="fb">Score: ${score} / ${tries}</p>`; }
@@ -141,7 +202,7 @@ $("bExplore").onclick=()=>setMode("explore"); $("bQuiz").onclick=()=>setMode("qu
 $("bLabels").onclick=e=>{allLabels=!allLabels;e.currentTarget.classList.toggle("on",allLabels);paint();};
 
 infoBody.innerHTML=HOME;
-build().then(()=>setMode("explore"));
+build().then(()=>{ if(ids.length) setMode("explore"); });
 </script>
 </body>
 </html>
