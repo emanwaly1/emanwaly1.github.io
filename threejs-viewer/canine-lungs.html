@@ -20,7 +20,8 @@ body{background:var(--card);color:var(--ink);font:400 1rem/1.5 var(--sans)}
 .bar button.on{background:var(--coral);border-color:var(--coral);color:#fff}
 .box{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:14px;overflow:hidden}
 .stage{position:relative}
-.art{position:absolute;top:0;height:100%}
+.art{position:absolute;top:0;height:100%;overflow:hidden}
+.canvas{position:absolute}
 .layer{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;transition:filter .15s}
 .layer.hover{filter:drop-shadow(0 0 2px var(--coral)) drop-shadow(0 0 5px var(--coral)) brightness(1.1)}
 .layer.sel{filter:drop-shadow(0 0 3px var(--coral)) drop-shadow(0 0 7px var(--coral)) saturate(1.5)}
@@ -59,6 +60,10 @@ body.plain .box{border-radius:12px}
 const FOLDER = "images/";
 const EXTS = ["png","webp"];
 
+// Empty space kept around the drawing (fraction of its size). The page crops the empty
+// transparent margins automatically. Smaller number = bigger drawing (0.02 big, 0.06 moderate, 0.12 small).
+const PAD = 0.06;
+
 // Listed from the bottom layer to the top layer.
 const PARTS = [
  {id:"left-caudal",  name:"Left caudal lobe",   fn:"Largest lobe of the left lung, lying over the diaphragm."},
@@ -79,6 +84,7 @@ if(PLAIN) document.body.classList.add("plain");
 const $=id=>document.getElementById(id), stage=$("stage"), box=$("box"), infoBody=$("infoBody");
 const NS="http://www.w3.org/2000/svg", byId=id=>PARTS.find(p=>p.id===id);
 let W=0,H=0,M=0,ratio=0,S=1,AW=0,AH=0;
+let VX=0,VY=0,VW=0,VH=0;   // visible region (natural pixels) after auto-crop
 let mode="explore",allLabels=false,selected=null,hovered=null,target=null,score=0,tries=0,locked=false,ids=[];
 const alpha={}, anchors={}, layers={};
 
@@ -135,44 +141,54 @@ async function build(){
   if(!ok.length){ stage.innerHTML='<div class="msg">No pictures found in <b>'+FOLDER+'</b><br>Expected files like <b>'+FOLDER+'left-caudal.png</b></div>'; return; }
   W=ok[0].im.naturalWidth; H=ok[0].im.naturalHeight;
   const odd=ok.filter(o=>o.im.naturalWidth!==W||o.im.naturalHeight!==H).map(o=>o.p.id);
-  M=W*0.34; ratio=(W+2*M)/H;
+  if(odd.length){ stage.innerHTML='<div class="msg bad">These pictures have a different size from the others: '+odd.join(", ")+'.<br>Export every layer at the same full canvas size.</div>'; return; }
   S=Math.min(1,900/W); AW=Math.round(W*S); AH=Math.round(H*S);
 
-  stage.innerHTML=""; stage.style.aspectRatio=(W+2*M)+"/"+H;
-  const art=document.createElement("div"); art.className="art";
-  art.style.left=(M/(W+2*M)*100)+"%"; art.style.width=(W/(W+2*M)*100)+"%"; stage.appendChild(art);
-  ok.forEach(o=>{ o.im.className="layer"; o.im.alt=""; o.im.draggable=false; art.appendChild(o.im); layers[o.p.id]=o.im; });
+  // alpha maps (needs http/https, not a local file)
+  let blocked=false;
+  for(const o of ok){ const a=makeAlpha(o.im); if(!a){blocked=true;break;} alpha[o.p.id]=a; }
 
-  if(odd.length||missing.length){
-    let t=""; if(missing.length) t+="Missing pictures: "+missing.join(", ")+". ";
-    if(odd.length) t+="These pictures have a different size from the others: "+odd.join(", ")+". Export every layer at the same full canvas size.";
-    infoBody.innerHTML="<p class='bad'>"+t+"</p>"; if(odd.length) return;
+  // auto-crop: bounding box of everything that is drawn, plus PAD
+  VX=0;VY=0;VW=W;VH=H;
+  if(!blocked){
+    let x0=AW,y0=AH,x1=-1,y1=-1;
+    for(const o of ok){ const a=alpha[o.p.id];
+      for(let y=0;y<AH;y++) for(let x=0;x<AW;x++) if(a[y*AW+x]>20){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } }
+    if(x1>=0){ const bw=(x1-x0+1)/S, bh=(y1-y0+1)/S, p=Math.max(bw,bh)*PAD;
+      VX=x0/S-p; VY=y0/S-p; VW=bw+2*p; VH=bh+2*p; }
   }
-  if(PLAIN) return;
+  M=PLAIN?0:VW*0.34; ratio=(VW+2*M)/VH;
 
-  // alpha maps (needs the page to be served over http/https, not opened as a local file)
-  for(const o of ok){ const a=makeAlpha(o.im); if(!a){
-      infoBody.innerHTML="<p class='bad'>The browser blocks reading the pictures when the page is opened from a local file. Run it through GitHub Pages or a local server (e.g. VS Code Live Server) and the hover will work.</p>"; return; }
-    alpha[o.p.id]=a; }
+  stage.innerHTML=""; stage.style.aspectRatio=(VW+2*M)+"/"+VH;
+  const art=document.createElement("div"); art.className="art";
+  art.style.left=(M/(VW+2*M)*100)+"%"; art.style.width=(VW/(VW+2*M)*100)+"%"; stage.appendChild(art);
+  const cv=document.createElement("div"); cv.className="canvas";
+  cv.style.left=(-VX/VW*100)+"%"; cv.style.top=(-VY/VH*100)+"%"; cv.style.width=(W/VW*100)+"%"; cv.style.height=(H/VH*100)+"%"; art.appendChild(cv);
+  ok.forEach(o=>{ o.im.className="layer"; o.im.alt=""; o.im.draggable=false; cv.appendChild(o.im); layers[o.p.id]=o.im; });
+  fit();
+
+  if(missing.length) infoBody.innerHTML="<p class='bad'>Missing pictures: "+missing.join(", ")+"</p>";
+  if(PLAIN) return;
+  if(blocked){
+    infoBody.innerHTML="<p class='bad'>The browser blocks reading the pictures when the page is opened from a local file. Run it through GitHub Pages or a local server (e.g. VS Code Live Server) and the hover will work.</p>"; return; }
   ids=ok.map(o=>o.p.id);
 
-  const svg=document.createElementNS(NS,"svg"); svg.setAttribute("class","lab"); svg.setAttribute("viewBox",`${-M} 0 ${W+2*M} ${H}`); stage.appendChild(svg);
+  const svg=document.createElementNS(NS,"svg"); svg.setAttribute("class","lab"); svg.setAttribute("viewBox",`${VX-M} ${VY} ${VW+2*M} ${VH}`); stage.appendChild(svg);
 
-  const fs=W*0.03, gap=fs*2.3, items=[];
-  ids.forEach(id=>{ const a=anchorOf(alpha[id]); if(a){ anchors[id]=a; items.push({id,cx:a[0],cy:a[1],side:a[0]<W/2?"L":"R"}); } });
+  const fs=VW*0.03, gap=fs*2.3, items=[], top=VY+fs, bot=VY+VH-fs;
+  ids.forEach(id=>{ const a=anchorOf(alpha[id]); if(a){ anchors[id]=a; items.push({id,cx:a[0],cy:a[1],side:a[0]<VX+VW/2?"L":"R"}); } });
   ["L","R"].forEach(s=>{ const g=items.filter(i=>i.side===s).sort((a,b)=>a.cy-b.cy); let last=-1e9;
-    g.forEach(i=>{i.ly=Math.max(i.cy,last+gap,fs);last=i.ly;}); const over=last-(H-fs); if(over>0) g.forEach(i=>i.ly-=over); });
-  items.forEach(i=>{ const L=i.side==="L", ex=L?-fs*.6:W+fs*.6, tx=L?-fs*1.1:W+fs*1.1, g=document.createElementNS(NS,"g");
+    g.forEach(i=>{i.ly=Math.max(i.cy,last+gap,top);last=i.ly;}); const over=last-bot; if(over>0) g.forEach(i=>i.ly-=over); });
+  items.forEach(i=>{ const L=i.side==="L", ex=L?VX-fs*.6:VX+VW+fs*.6, tx=L?VX-fs*1.1:VX+VW+fs*1.1, g=document.createElementNS(NS,"g");
     g.setAttribute("class","lbl"); g.id="lbl-"+i.id;
     g.innerHTML=`<polyline points="${i.cx},${i.cy} ${ex},${i.ly}"/><circle cx="${i.cx}" cy="${i.cy}" r="${fs*.25}"/><text x="${tx}" y="${i.ly+fs*.35}" font-size="${fs}" text-anchor="${L?"end":"start"}">${byId(i.id).name}</text>`;
     svg.appendChild(g); });
 
   const pick=e=>{ const r=svg.getBoundingClientRect();
-    return hitAt(((e.clientX-r.left)/r.width*(W+2*M))-M, (e.clientY-r.top)/r.height*H); };
+    return hitAt(VX-M+(e.clientX-r.left)/r.width*(VW+2*M), VY+(e.clientY-r.top)/r.height*VH); };
   svg.addEventListener("pointermove",e=>{ const id=pick(e); svg.style.cursor=id?"pointer":"default"; if(id!==hovered){hovered=id;paint();} });
   svg.addEventListener("pointerleave",()=>{hovered=null;paint();});
   svg.addEventListener("click",e=>onClick(pick(e)));
-  fit();
 }
 
 function paint(){
