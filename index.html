@@ -99,7 +99,28 @@ pre i{color:#f6a3b3;font-style:normal}pre b{color:var(--mint);font-weight:500}
 .contact a.big{font-family:var(--display);font-weight:700;font-size:clamp(1.5rem,4.5vw,2.6rem);color:var(--coral);word-break:break-all}
 .links{display:flex;flex-wrap:wrap;gap:24px;margin-top:24px}
 footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
+/* surgery: illustrations + operation training */
+.illus{aspect-ratio:auto;background:#fff;border:1px solid var(--line)}
+.illus img{position:static;width:100%;height:auto;max-height:78vh;object-fit:contain;display:block}
+.illus .miss{display:none;place-items:center;min-height:240px;color:var(--dim);background:repeating-linear-gradient(135deg,#d9ece6 0 14px,#cfe6df 14px 28px)}
+.illus.missing .miss{display:grid}
+.try{font:700 1rem var(--sans);margin-top:16px;background:var(--coral);color:#fff;border:0;border-radius:999px;padding:12px 26px;cursor:pointer}
+.try:hover{background:#c0425b}
+.startcard{display:none;text-align:center;padding:22px 14px;border:1px dashed var(--line);border-radius:14px;background:var(--bg)}
+.startcard h3{margin-top:0}.startcard .tip{font-size:.88rem;margin-top:10px}
+@media(max-width:800px),(max-height:520px){.inline{display:none}.startcard{display:block}}
+#trainOv{position:fixed;inset:0;z-index:100;background:#22313a;display:flex;flex-direction:column}
+@supports(height:100dvh){#trainOv{height:100dvh}}
+#trainOv[hidden]{display:none}
+.tbar{flex:none;display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;color:#fff;font-size:.9rem}
+.tbar b{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:500}
+.tbar a,.tbar button{color:#fff;background:#ffffff22;border:0;border-radius:999px;padding:4px 14px;font:500 .85rem var(--sans);text-decoration:none;cursor:pointer}
+#trainOv iframe{flex:1;width:100%;min-height:0;border:0;background:var(--bg)}
+.rot{position:absolute;inset:36px 0 0;display:none;flex-direction:column;gap:14px;align-items:center;justify-content:center;text-align:center;background:#22313af2;color:#fff;padding:24px;z-index:2;font-size:1.1rem}
+.rot button{font:700 .95rem var(--sans);background:var(--coral);color:#fff;border:0;border-radius:999px;padding:10px 22px;cursor:pointer}
+@media(orientation:portrait){#trainOv:not(.go) .rot{display:flex}}
 </style>
+
 </head>
 <body>
 <script>document.documentElement.className='js'</script>
@@ -235,7 +256,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
         <article class="panel" data-title="Blood flow">
           <div class="media tall"><iframe data-src="threejs-viewer/sickle-blood.html" title="Healthy versus sickle cell blood flow" allowfullscreen></iframe></div>
           <h3>Blood: normal vs sickle cell</h3>
-          <p>Two blood flows animated in Blender geometry nodes, from the same camera. Predict how sickle cell blood will flow, compare it side by side with healthy blood, then lower the oxygen and watch the cells sickle.</p>
+          <p>Two blood flows animated in Blender geometry nodes, from the same camera. Drag the slider to compare healthy and sickle cell blood, watch the flow slow down and jam, then lower the oxygen and see the cells sickle.</p>
           <div class="tools">Blender geometry nodes</div>
         </article>
 
@@ -251,11 +272,46 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
           <div class="tools">Hand drawing · HTML · JavaScript</div>
         </article>
 
-        <article class="panel" data-title="Vet surgery">
-          <div class="media"><div class="ph">Add surgery illustrations here</div></div>
-          <h3>Veterinary surgery, step by step</h3>
-          <p>Instructional illustrations of two dog procedures: entropion and cherry eye.</p>
+        <article class="panel" data-title="Surgery illustrations">
+          <div class="view" data-label="Entropion">
+            <div class="media illus" data-img="images/surgery/entropion" data-alt="Entropion correction, step by step"><span class="miss">Illustration coming soon</span></div>
+            <h3>Entropion correction</h3>
+            <p>The lower eyelid of the dog rolls inward and the hairs rub the cornea. The Hotz-Celsus technique removes a crescent of skin so the eyelid margin turns outward again: lid plate, crescent incision, removal of the strip, sutures.</p>
+            <button type="button" class="try" data-try="entropion">Try this operation</button>
+          </div>
+          <div class="view" data-label="Cherry eye">
+            <div class="media illus" data-img="images/surgery/cherry-eye" data-alt="Cherry eye correction, step by step"><span class="miss">Illustration coming soon</span></div>
+            <h3>Cherry eye</h3>
+            <p>The gland of the third eyelid prolapses. In the Morgan pocket technique the gland is not removed: it is pushed back into a pocket made from the conjunctiva, which protects tear production and avoids dry eye.</p>
+            <button type="button" class="try" data-try="cherry">Try this operation</button>
+          </div>
           <div class="tools">2D illustration</div>
+        </article>
+
+        <article class="panel" data-title="Operation training">
+          <div class="view" data-label="Entropion">
+            <div class="media tall inline"><iframe data-src="threejs-viewer/entropion-trainer.html" title="Entropion correction trainer" allowfullscreen></iframe></div>
+            <div class="startcard">
+              <h3>Entropion correction trainer</h3>
+              <p>Four steps: place the lid plate, make the crescent incision, cut out the skin strip and suture.</p>
+              <button type="button" class="try" data-open="threejs-viewer/entropion-trainer.html" data-title="Entropion correction trainer">Start training</button>
+              <p class="tip">Opens in full screen. Best with the phone held sideways.</p>
+            </div>
+            <h3>Entropion correction trainer</h3>
+            <p>Practice the operation yourself. Pick the tool, then press and drag or tap on the picture. Guided mode marks the tool and the target.</p>
+          </div>
+          <div class="view" data-label="Cherry eye">
+            <div class="media tall inline"><iframe data-src="threejs-viewer/cherry-eye-trainer.html" title="Cherry eye surgery trainer" allowfullscreen></iframe></div>
+            <div class="startcard">
+              <h3>Cherry eye surgery trainer</h3>
+              <p>Choose the suture, evert the third eyelid, make the incisions, bury the gland and close the pocket.</p>
+              <button type="button" class="try" data-open="threejs-viewer/cherry-eye-trainer.html" data-title="Cherry eye surgery trainer">Start training</button>
+              <p class="tip">Opens in full screen. Best with the phone held sideways.</p>
+            </div>
+            <h3>Cherry eye surgery trainer</h3>
+            <p>Practice the Morgan pocket technique step by step, with the tissues of each step shown beside the picture.</p>
+          </div>
+          <div class="tools">Interactive · HTML · JavaScript</div>
         </article>
 
         <article class="panel" data-title="Mechanism">
@@ -338,6 +394,12 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
 
 <footer><div class="wrap">© 2026 Eman Waly</div></footer>
 
+<div id="trainOv" hidden>
+  <div class="tbar"><b></b><a href="#" target="_blank" rel="noopener">Open in new tab</a><button type="button" data-close>Close</button></div>
+  <iframe title="Operation trainer" allowfullscreen></iframe>
+  <div class="rot"><div>Turn your phone sideways for a bigger picture.</div><button type="button" data-go>Continue anyway</button></div>
+</div>
+
 <script>
 // Build the project tabs from the panels, and show one panel at a time.
 (function(){
@@ -346,13 +408,13 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   var groups=[
     ['3D anatomy and animation',['Brain','Heart','Heart: septal defect','Heart: ischemia','Eye cross-section','Humerus']],
     ['Sickle cell project',['Blood flow','Mechanism','Blood cell game']],
-    ['2D and interactive',['Canine lungs','Vet surgery','Interactive heart']]
+    ['2D and interactive',['Canine lungs','Surgery illustrations','Operation training','Interactive heart']]
   ];
   var panels=[], buttons=[];
   var current=0;
   // lazy-load: an iframe with data-src gets its src only when it is visible
   function load(p){
-    var f=[].slice.call(p.querySelectorAll('iframe[data-src]')).filter(function(x){return !x.closest('[hidden]')})[0];
+    var f=[].slice.call(p.querySelectorAll('iframe[data-src]')).filter(function(x){return !x.closest('[hidden]') && x.offsetParent!==null})[0];
     if(f && f.getAttribute('src')!==f.dataset.src) f.src=f.dataset.src;
   }
   // free the GPU: a 3D viewer that is not on screen is unloaded (reloads fast, files are small)
@@ -399,6 +461,45 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
       tabs.appendChild(b);buttons.push(b);
     });
   });
+
+  // ---- surgery: illustrations (png, webp or jpg), Try button, full-screen trainer on phones
+  [].forEach.call(document.querySelectorAll('.illus[data-img]'),function(box){
+    var ex=['png','webp','jpg','jpeg'],k=0,im=new Image();
+    im.alt=box.dataset.alt||'';im.loading='lazy';
+    im.onerror=function(){k++;if(k<ex.length){im.src=box.dataset.img+'.'+ex[k]}else{box.classList.add('missing');im.remove()}};
+    im.src=box.dataset.img+'.'+ex[0];box.insertBefore(im,box.firstChild);
+  });
+  var TRAIN={entropion:{src:'threejs-viewer/entropion-trainer.html',title:'Entropion correction trainer',label:'Entropion'},
+             cherry:{src:'threejs-viewer/cherry-eye-trainer.html',title:'Cherry eye surgery trainer',label:'Cherry eye'}};
+  var ov=document.getElementById('trainOv'),ovf=ov.querySelector('iframe'),ovt=ov.querySelector('b'),ovl=ov.querySelector('a');
+  function phone(){return matchMedia('(max-width:800px), (max-height:520px)').matches}
+  function goTo(title,label){
+    var i=-1;panels.forEach(function(p,n){if(p.dataset.title===title)i=n});
+    if(i<0)return;
+    show(i,true);
+    [].forEach.call(panels[i].querySelectorAll('.subtabs button'),function(b){if(b.textContent===label)b.click()});
+    panels[i].scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  function openTrain(src,title){
+    ovt.textContent=title;ovl.href=src;ov.classList.remove('go');ov.hidden=false;ovf.src=src;
+    document.documentElement.style.overflow='hidden';
+    try{var r=ov.requestFullscreen||ov.webkitRequestFullscreen;
+      if(r){var p=r.call(ov);if(p&&p.then)p.then(function(){if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}).catch(function(){})}}catch(e){}
+  }
+  function closeTrain(){
+    try{if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock()}catch(e){}
+    try{if(document.fullscreenElement)document.exitFullscreen();else if(document.webkitFullscreenElement&&document.webkitExitFullscreen)document.webkitExitFullscreen()}catch(e){}
+    ov.hidden=true;ovf.src='about:blank';document.documentElement.style.overflow='';
+  }
+  document.addEventListener('click',function(e){
+    var t=e.target.closest('[data-try],[data-open],[data-close],[data-go]');if(!t)return;
+    if(t.dataset.open){openTrain(t.dataset.open,t.dataset.title||'');return}
+    if(t.dataset.close!==undefined){closeTrain();return}
+    if(t.dataset.go!==undefined){ov.classList.add('go');return}
+    var it=TRAIN[t.dataset.try];if(!it)return;
+    if(phone())openTrain(it.src,it.title);else goTo('Operation training',it.label);
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!ov.hidden)closeTrain()});
   show(0,true);
   // load the first viewer only when the work section is about to be seen
   var work=document.getElementById('work');
