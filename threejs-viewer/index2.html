@@ -12,6 +12,11 @@
   #viewer canvas{display:block;width:100%;height:100%}
   #label{position:absolute;left:16px;bottom:16px;background:#fff;border:1px solid #d3e0dc;border-radius:999px;padding:8px 18px}
   #hint{position:absolute;right:16px;bottom:16px;color:#5a6b73;font-size:.9rem}
+  #loading{position:absolute;inset:0;z-index:9;background:#f1f6f4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
+  #pct{font-size:2.6rem;font-weight:700;letter-spacing:-.02em;color:#d9566f;font-variant-numeric:tabular-nums}
+  #bar{width:min(320px,80%);height:8px;border-radius:999px;background:#d3e0dc;overflow:hidden}
+  #bar i{display:block;height:100%;width:0;background:#d9566f;transition:width .2s}
+  #msg{color:#5a6b73;font-size:.95rem}
 @supports (height:100dvh){body{height:100dvh}}
 @media (max-width:700px){
   #hint{bottom:auto;top:10px;right:10px;font-size:.8rem}
@@ -21,9 +26,17 @@
 </head>
 <body>
 <div id="viewer">
-  <div id="label">Click a part to see its name</div>
+  <div id="loading"><div id="pct">0%</div><div id="bar"><i></i></div><div id="msg">Loading the eye model…</div></div>
+  <div id="label">Hover or tap a part to see its name</div>
   <div id="hint">Drag to rotate · Scroll to zoom</div>
 </div>
+
+<script>
+// shows the real reason on screen if the viewer cannot start
+function say(t){var m=document.getElementById('msg');if(m)m.textContent=t}
+addEventListener('error',function(e){say('Error: '+e.message)});
+addEventListener('unhandledrejection',function(e){say('Error: '+((e.reason&&e.reason.message)||e.reason))});
+</script>
 
 <!-- Three.js is loaded from a CDN, pinned to one version -->
 <script type="importmap">
@@ -45,6 +58,8 @@ const MODEL_FILE = 'eye.glb';  // <- put your exported model next to this file
 
 const box = document.getElementById('viewer');
 const label = document.getElementById('label');
+const loadingEl = document.getElementById('loading'), pctEl = document.getElementById('pct'), barEl = document.querySelector('#bar i'), msgEl = document.getElementById('msg');
+const DEFAULT = 'Hover or tap a part to see its name';
 
 // 1) scene, camera, renderer
 const scene = new THREE.Scene();
@@ -72,6 +87,26 @@ controls.autoRotateSpeed = 1.5;
 
 // 4) put the model in view, whatever its size
 let model;
+const meshes = [];
+let hovered = null, selected = null;
+const LIT = new THREE.Color(0xd9566f);
+const nameOf = (o) => o.name || (o.parent && o.parent.name) || '(unnamed part)';
+function paint(mesh, level) {
+  (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).forEach((m) => {
+    if (!m.emissive) return;
+    if (!m.userData.base) m.userData.base = { c: m.emissive.clone(), i: m.emissiveIntensity };
+    if (level) { m.emissive.copy(LIT); m.emissiveIntensity = level; }
+    else { m.emissive.copy(m.userData.base.c); m.emissiveIntensity = m.userData.base.i; }
+  });
+}
+function refresh() {   // light up the part under the pointer (soft) and the clicked part (strong)
+  meshes.forEach((m) => {
+    const lv = m === selected ? 0.8 : m === hovered ? 0.5 : 0;
+    if (m.userData.lvl !== lv) { m.userData.lvl = lv; paint(m, lv); }
+  });
+  const o = hovered || selected;
+  label.textContent = o ? nameOf(o) : DEFAULT;
+}
 const FIX_MATERIALS = true; // set to false if the fixes below change your look in a way you don't like
 function setModel(obj) {
   model = obj;
@@ -85,6 +120,13 @@ function setModel(obj) {
       });
     });
   }
+  // every part gets its own material copy, so lighting one part never lights the others
+  meshes.length = 0;
+  obj.traverse((o) => {
+    if (!o.isMesh || !o.material) return;
+    o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone();
+    meshes.push(o);
+  });
   scene.add(obj);
   const b = new THREE.Box3().setFromObject(obj);
   const size = b.getSize(new THREE.Vector3());
@@ -106,8 +148,14 @@ gltfLoader.setDRACOLoader(draco);
 gltfLoader.setMeshoptDecoder(MeshoptDecoder);
 gltfLoader.load(
   MODEL_FILE,
-  (gltf) => setModel(gltf.scene),
-  undefined,
+  (gltf) => { setModel(gltf.scene); loadingEl.style.display = 'none'; },
+  (e) => {   // download progress
+    if (e.total) {
+      const p = Math.min(100, Math.round((e.loaded / e.total) * 100));
+      pctEl.textContent = p + '%'; barEl.style.width = p + '%';
+      if (p >= 100) msgEl.textContent = 'Preparing the model…';
+    } else { pctEl.textContent = (e.loaded / 1048576).toFixed(1) + ' MB'; msgEl.textContent = 'Downloading…'; }
+  },
   (err) => {
     console.error('Eye model failed to load:', err);
     const m = new THREE.Mesh(
@@ -116,6 +164,7 @@ gltfLoader.load(
     );
     m.name = 'Placeholder (add model.glb)';
     setModel(m);
+    loadingEl.style.display = 'none';
   }
 );
 
@@ -127,14 +176,23 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   down = [e.clientX, e.clientY];
   controls.autoRotate = false;
 });
-renderer.domElement.addEventListener('pointerup', (e) => {
-  if (!model || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return; // it was a drag
+function pick(e) {
   const r = renderer.domElement.getBoundingClientRect();
   mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(mouse, camera);
-  const hit = ray.intersectObject(model, true)[0];
-  label.textContent = hit ? (hit.object.name || '(unnamed part)') : 'Click a part to see its name';
+  return ray.intersectObject(model, true)[0];
+}
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!model || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return; // it was a drag
+  const hit = pick(e);
+  selected = hit ? hit.object : null;
+  if (e.pointerType !== 'mouse') hovered = null;   // on a phone the tapped part stays lit
+  refresh();
 });
+// mouse only: light up the part under the pointer (checked at most every 50 ms)
+let pend = null, lastRay = 0;
+renderer.domElement.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' && !e.buttons) pend = e; });
+renderer.domElement.addEventListener('pointerleave', () => { pend = null; hovered = null; refresh(); renderer.domElement.style.cursor = ''; });
 
 // 7) keep it sized to the page and draw every frame
 function resize() {
@@ -146,6 +204,13 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 renderer.setAnimationLoop(() => {
+  if (pend && model && performance.now() - lastRay > 50) {
+    lastRay = performance.now();
+    const hit = pick(pend); pend = null;
+    const nh = hit ? hit.object : null;
+    if (nh !== hovered) { hovered = nh; refresh(); }
+    renderer.domElement.style.cursor = nh ? 'pointer' : '';
+  }
   controls.update();
   renderer.render(scene, camera);
 });
