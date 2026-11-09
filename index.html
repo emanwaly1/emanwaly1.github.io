@@ -119,6 +119,17 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
 .rot{position:absolute;inset:36px 0 0;display:none;flex-direction:column;gap:14px;align-items:center;justify-content:center;text-align:center;background:#22313af2;color:#fff;padding:24px;z-index:2;font-size:1.1rem}
 .rot button{font:700 .95rem var(--sans);background:var(--coral);color:#fff;border:0;border-radius:999px;padding:10px 22px;cursor:pointer}
 @media(orientation:portrait){#trainOv:not(.go) .rot{display:flex}}
+
+/* sources tab */
+.srclist{margin-top:18px;display:grid;gap:10px}
+.src{border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.src summary{cursor:pointer;padding:13px 18px;font-weight:700}
+.src[open] summary{border-bottom:1px solid var(--line)}
+.src ul{list-style:none;padding:4px 18px 10px}
+.src li{padding:10px 0;border-bottom:1px solid var(--line)}
+.src li:last-child{border-bottom:0}
+.src li span{display:block;color:var(--dim);font-size:.9rem}
+.srclink{display:inline-block;margin-top:12px;font-size:.92rem;font-weight:700}
 </style>
 
 </head>
@@ -336,6 +347,23 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
           <div class="tools">HTML · JavaScript</div>
         </article>
 
+        <article class="panel" data-title="Sources">
+          <h3 style="margin-top:0">Sources</h3>
+          <p>The references behind the science in each project: government health agencies, veterinary and medical reference books, and the original research papers. Open a project to see its list.</p>
+          <div class="srclist">
+          <details class="src" id="src-brain"><summary>Brain</summary><ul><li><a href="https://www.ncbi.nlm.nih.gov/books/NBK534861/" target="_blank" rel="noopener">Neuroanatomy, Circle of Willis</a><span>StatPearls, NCBI Bookshelf (NIH)</span></li><li><a href="https://www.ncbi.nlm.nih.gov/books/NBK532297/" target="_blank" rel="noopener">Arterial blood supply of the brain</a><span>StatPearls, NCBI Bookshelf (NIH)</span></li><li><a href="https://www.ncbi.nlm.nih.gov/books/NBK482257/" target="_blank" rel="noopener">Neuroanatomy, Dural Venous Sinuses</a><span>StatPearls, NCBI Bookshelf (NIH)</span></li><li><a href="https://www.ncbi.nlm.nih.gov/books/NBK539882/" target="_blank" rel="noopener">Neuroanatomy, Cranial Meninges</a><span>StatPearls, NCBI Bookshelf (NIH)</span></li><li><b>Gray H. Anatomy of the Human Body, 20th ed. (1918)</b><span>Classic anatomy textbook, public domain</span></li></ul></details>
+          <details class="src" id="src-heart"><summary>Heart</summary><ul><li><a href="https://www.statpearls.com/point-of-care/24148" target="_blank" rel="noopener">Anatomy, Thorax, Heart: Left Anterior Descending (LAD) Artery</a><span>StatPearls</span></li><li><a href="https://cdc.gov/heart-defects/about/ventricular-septal-defect.html" target="_blank" rel="noopener">Ventricular Septal Defect: how blood flows in a normal heart</a><span>CDC, Centers for Disease Control and Prevention</span></li></ul></details>
+          <details class="src" id="src-vsd"><summary>Heart: septal defect</summary><ul><li><a href="https://cdc.gov/heart-defects/about/ventricular-septal-defect.html" target="_blank" rel="noopener">Ventricular Septal Defect</a><span>CDC, Centers for Disease Control and Prevention</span></li><li><b>Reller MD et al. Prevalence of congenital heart defects in metropolitan Atlanta, 1998-2005. J Pediatr 2008;153:807-13</b><span>Peer-reviewed study cited by the CDC page</span></li></ul></details>
+          <details class="src" id="src-ischemia"><summary>Heart: ischemia</summary><ul><li><a href="https://www.statpearls.com/point-of-care/24148" target="_blank" rel="noopener">Anatomy, Thorax, Heart: Left Anterior Descending (LAD) Artery</a><span>StatPearls</span></li><li><a href="https://webharvest.gov/congress115th/20190108200315/https://www.nhlbi.nih.gov/health/health-topics/topics/atherosclerosis" target="_blank" rel="noopener">Atherosclerosis (archived 2019 copy)</a><span>NHLBI, National Heart, Lung, and Blood Institute (NIH)</span></li></ul></details>
+          <details class="src" id="src-eye"><summary>Eye cross-section</summary><ul><li><a href="https://www.ncbi.nlm.nih.gov/books/NBK470340/" target="_blank" rel="noopener">Anatomy, Head and Neck: Eye, Cornea</a><span>StatPearls, NCBI Bookshelf (NIH)</span></li><li><a href="https://www.ncbi.nlm.nih.gov/books/NBK532914/" target="_blank" rel="noopener">Anatomy, Head and Neck: Eye, Lacrimal Gland</a><span>StatPearls, NCBI Bookshelf (NIH)</span></li><li><a href="https://www.ncbi.nlm.nih.gov/books/NBK549919/" target="_blank" rel="noopener">Anatomy, Head and Neck: Eye Nerves</a><span>StatPearls, NCBI Bookshelf (NIH)</span></li><li><a href="https://www.ncbi.nlm.nih.gov/books/NBK482304/" target="_blank" rel="noopener">Anatomy, Head and Neck: Orbicularis Oculi Muscle</a><span>StatPearls, NCBI Bookshelf (NIH)</span></li></ul></details>
+          <details class="src" id="src-humerus"><summary>Humerus</summary><ul><li><a href="https://www.ncbi.nlm.nih.gov/books/NBK534821/" target="_blank" rel="noopener">Anatomy, Shoulder and Upper Limb, Humerus</a><span>StatPearls, NCBI Bookshelf (NIH)</span></li></ul></details>
+          <details class="src" id="src-sickle"><summary>Sickle cell: blood flow and mechanism</summary><ul><li><a href="https://www.nhlbi.nih.gov/health-topics/sickle-cell-disease" target="_blank" rel="noopener">Sickle cell disease</a><span>NHLBI, National Heart, Lung, and Blood Institute (NIH)</span></li><li><a href="https://www.hematology.org/-/media/hematology/files/education/clinicians/guidelines-quality/documents/ash-understanding-scd-infographic_2019.pdf" target="_blank" rel="noopener">Understanding sickle cell disease (infographic, PDF)</a><span>ASH, American Society of Hematology</span></li><li><a href="https://pubmed.ncbi.nlm.nih.gov/13464827/" target="_blank" rel="noopener">Ingram VM. Gene mutations in human haemoglobin: the chemical difference between normal and sickle cell haemoglobin. Nature 1957;180:326-8</a><span>PubMed, the paper that found the valine for glutamic acid change</span></li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC1470873/" target="_blank" rel="noopener">Ingram VM. Sickle-cell anemia hemoglobin: the molecular biology of the first &quot;molecular disease&quot;. Genetics 2004;167:1-7</a><span>PubMed Central, free full text</span></li><li><b>Pauling L, Itano HA, Singer SJ, Wells IC. Sickle cell anemia, a molecular disease. Science 1949;110:543-8</b><span>The first paper to show the hemoglobin itself is different</span></li></ul></details>
+          <details class="src" id="src-cells"><summary>Blood cell game</summary><ul><li><a href="https://eclinpath.com/?p=1581" target="_blank" rel="noopener">Red blood cells: morphology and interpretation</a><span>eClinPath, Cornell University College of Veterinary Medicine</span></li><li><a href="https://eclinpath.com/?p=9324" target="_blank" rel="noopener">Red blood cell morphology terms and their meaning</a><span>eClinPath, Cornell University College of Veterinary Medicine</span></li><li><a href="https://eclinpath.com/?p=1874" target="_blank" rel="noopener">Erythrocytes across species (dog, cat, horse, llama and others)</a><span>eClinPath, Cornell University College of Veterinary Medicine</span></li><li><a href="https://www.saskoer.ca/vet-clinical-pathology-intro/chapter/erythrocyte-morphology-images/" target="_blank" rel="noopener">Erythrocyte morphology images</a><span>Introduction to Veterinary Clinical Pathology, University of Saskatchewan open textbook</span></li></ul></details>
+          <details class="src" id="src-surgery"><summary>Eyelid surgery: cherry eye, entropion and the trainers</summary><ul><li><a href="https://www.merckvetmanual.com/eye-and-ear/ophthalmology/nasolacrimal-and-lacrimal-apparatus" target="_blank" rel="noopener">Nasolacrimal and lacrimal apparatus (cherry eye)</a><span>Merck Veterinary Manual, professional version</span></li><li><a href="https://merckvetmanual.com/dog-owners/eye-disorders-of-dogs/disorders-of-the-nasal-cavity-and-tear-ducts-in-dogs" target="_blank" rel="noopener">Disorders of the nasal cavity and tear ducts in dogs</a><span>Merck Veterinary Manual, pet owner version</span></li><li><a href="https://www.merckvetmanual.com/dog-owners/eye-disorders-of-dogs/disorders-of-the-eyelids-in-dogs" target="_blank" rel="noopener">Disorders of the eyelids in dogs (entropion)</a><span>Merck Veterinary Manual, pet owner version</span></li><li><a href="https://vettimes.co.uk/article/challenges-in-eyelid-surgery" target="_blank" rel="noopener">Ofri R. Challenges in eyelid surgery</a><span>Vet Times, written by a board-certified veterinary ophthalmologist (DECVO)</span></li></ul></details>
+          <details class="src" id="src-lungs"><summary>Canine lungs</summary><ul><li><a href="https://pubmed.ncbi.nlm.nih.gov/7948372" target="_blank" rel="noopener">Nakakuki S. The bronchial tree and lobular division of the dog lung. J Vet Med Sci 1994;56:455-8</a><span>PubMed</span></li><li><b>König HE, Liebich HG. Veterinary Anatomy of Domestic Mammals, 7th ed. Thieme, 2020</b><span>Textbook</span></li><li><b>Dyce KM, Sack WO, Wensing CJG. Textbook of Veterinary Anatomy, 5th ed. Elsevier, 2017</b><span>Textbook</span></li><li><b>Nomina Anatomica Veterinaria, 6th ed. World Association of Veterinary Anatomists, 2017</b><span>The official list of veterinary anatomical terms</span></li></ul></details>
+          </div>
+        </article>
+
         <article class="panel" data-title="Interactive heart">
           <div class="media"><div class="ph">Add Spline or Unity embed here</div></div>
           <h3>Explore the heart in 3D</h3>
@@ -414,7 +442,8 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   var groups=[
     ['3D anatomy and animation',['Brain','Heart','Heart: septal defect','Heart: ischemia','Eye cross-section','Humerus']],
     ['Sickle cell project',['Blood flow','Mechanism','Blood cell game']],
-    ['2D and interactive',['Cherry eye','Canine lungs','Entropion','Operation training','Interactive heart']]
+    ['2D and interactive',['Cherry eye','Canine lungs','Entropion','Operation training','Interactive heart']],
+    ['References',['Sources']]
   ];
   var panels=[], buttons=[];
   var current=0;
@@ -510,6 +539,10 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   });
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!ov.hidden)closeTrain()});
   show(0,true);
+  // "Sources for this project" link under each project, opens the matching list in the Sources tab
+  var SRC={'Brain':'brain','Heart':'heart','Interactive heart':'heart','Heart: septal defect':'vsd','Heart: ischemia':'ischemia','Eye cross-section':'eye','Humerus':'humerus','Blood flow':'sickle','Mechanism':'sickle','Blood cell game':'cells','Cherry eye':'surgery','Entropion':'surgery','Operation training':'surgery','Canine lungs':'lungs'};
+  panels.forEach(function(p){var k=SRC[p.dataset.title];if(!k)return;var a=document.createElement('a');a.href='#src-'+k;a.className='srclink';a.dataset.sources=k;a.textContent='Sources for this project';p.appendChild(a)});
+  document.addEventListener('click',function(e){var a=e.target.closest('[data-sources]');if(!a)return;e.preventDefault();goTo('Sources');var d=document.getElementById('src-'+a.dataset.sources);if(d){d.open=true;d.scrollIntoView({behavior:'smooth',block:'start'})}});
   // load the first viewer only when the work section is about to be seen
   var work=document.getElementById('work');
   if('IntersectionObserver' in window){

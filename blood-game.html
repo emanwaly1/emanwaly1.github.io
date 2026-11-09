@@ -1,100 +1,100 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>رحلة الدم</title>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+<title>Blood cell game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#1a0a0e;--panel:#2a1218;--ink:#fbeff0;--mut:#c9a3a8;--acc:#e8505b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:Tajawal,system-ui,sans-serif;color-scheme:dark;overflow:hidden}
-body{display:flex;flex-direction:column}
-header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;gap:8px;flex-wrap:wrap}
-h1{font-size:18px;margin:0}
-.row{display:flex;gap:6px;flex-wrap:wrap}
-button{font:inherit;color:var(--ink);background:var(--panel);border:1px solid #4a2229;border-radius:999px;padding:7px 14px;cursor:pointer}
-button.on{background:var(--acc);border-color:var(--acc);color:#fff}
-.tabs{padding:0 14px 8px}
-#stage{position:relative;flex:1;min-height:0}
+:root{--bg:#f6efeb;--ink:#2b2226;--dim:#6e5f63;--line:#e6d6d0;--card:#fffdfc;--coral:#a8484c;--teal:#5b3a8f;--lilac:#c7b8ea;--mint:#bfe3d8;--display:"Bricolage Grotesque",system-ui,sans-serif;--sans:"Karla",system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:400 1rem/1.5 var(--sans);overflow:hidden}
+body{display:flex;flex-direction:column;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px 6px}
+h1{font:700 1.3rem var(--display);letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:.5em}
+h1::before{content:"";width:.85em;height:.85em;border-radius:50%;background:radial-gradient(circle,#7d3338 0 28%,#b5524f 32% 100%);box-shadow:0 1px 3px #7d333855}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.tabs{padding:4px 16px 10px;flex-wrap:nowrap;overflow-x:auto}
+button{font:500 .95rem var(--sans);color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:9px 16px;cursor:pointer;white-space:nowrap;min-height:40px}
+button:hover{background:#f6ece8}
+button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+button.go{background:var(--coral);color:#fff;border-color:var(--coral);font-weight:700}
+button.go:hover{background:#8f3a3f}
+:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+#stage{position:relative;flex:1;min-height:0;margin:0 16px 16px;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--card);box-shadow:0 6px 24px #7d33381a}
 canvas{width:100%;height:100%;display:block;touch-action:manipulation}
-#hud{position:absolute;top:8px;left:0;right:0;text-align:center;font-weight:700;pointer-events:none;text-shadow:0 1px 4px #000;padding:0 12px}
-#card{position:absolute;left:0;right:0;bottom:0;background:var(--panel);border-radius:18px 18px 0 0;padding:16px 18px 20px;transform:translateY(105%);transition:transform .25s;box-shadow:0 -6px 24px #0008}
-#card.open{transform:none}
-#card h2{margin:0 0 2px;font-size:20px}
-#card small{color:var(--mut);display:block;margin-bottom:8px}
-#card p{margin:0 0 10px;line-height:1.7}
-#card .note{font-size:12px;color:var(--mut)}
-#toast{position:absolute;top:44px;left:50%;transform:translateX(-50%);background:#000b;padding:6px 14px;border-radius:999px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+#hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);max-width:calc(100% - 24px);background:#fffdfcee;border:1px solid var(--line);box-shadow:0 2px 8px #7d33381a;border-radius:999px;padding:6px 16px;font-weight:700;text-align:center;pointer-events:none}
+#hud:empty{display:none}
+#toast{position:absolute;top:58px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:6px 16px;border-radius:999px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 #toast.show{opacity:1}
+#card{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);border-radius:20px 20px 0 0;padding:18px 20px 20px;transform:translateY(105%);transition:transform .25s;box-shadow:0 -8px 28px #7d33382b}
+#card.open{transform:none}
+#card h2{font:700 1.5rem var(--display);letter-spacing:-.02em;margin:0}
+#card small{color:var(--teal);font-weight:700;display:block;margin-bottom:8px}
+#card p{margin:0 0 12px;color:var(--dim)}
+#card .note{font-size:.8rem}
+@media(prefers-reduced-motion:reduce){#card,#toast{transition:none}}
 </style>
 </head>
 <body>
 <header>
-  <h1>🩸 رحلة الدم</h1>
-  <div class="row" id="modes">
-    <button data-m="learn" class="on">تعلّم</button>
-    <button data-m="play">تحدّي</button>
-  </div>
+  <h1>Blood cell game</h1>
+  <div class="row" id="modes"><button data-m="learn" class="on">Learn</button><button data-m="play">Challenge</button></div>
 </header>
 <div class="tabs row" id="cats">
-  <button data-c="normal" class="on">الدم الطبيعي</button>
-  <button data-c="human">تشوهات في الإنسان</button>
-  <button data-c="animal">الدم عند الحيوان</button>
+  <button data-c="normal" class="on">Normal blood</button>
+  <button data-c="human">Human disorders</button>
+  <button data-c="animal">Animal blood</button>
 </div>
-<div id="stage">
-  <canvas id="cv"></canvas>
-  <div id="hud"></div>
-  <div id="toast"></div>
-  <div id="card"></div>
-</div>
+<div id="stage"><canvas id="cv"></canvas><div id="hud"></div><div id="toast"></div><div id="card"></div></div>
 
 <script>
-// لو رسمتي الخلايا: حطي صورة PNG شفافة لكل خلية هنا وهتظهر بدل الشكل التجريبي
-const IMG = {
-  // rbc: 'cells/rbc.png',
-  // sickle: 'cells/sickle.png',
-};
-const imgs = {};
-for (const k in IMG) { const i = new Image(); i.src = IMG[k]; imgs[k] = i; }
+// When you finish a drawing, save it as cells/<id>.png and add its id here, e.g. ['rbc','wbc'].
+// Until then the game shows a simple placeholder shape. Drawing sizes: see the cell guide sheet.
+const DRAWN = ['rbc','wbc','plt','sickle','target','sphero','schisto','camel','bird','heinz','babesia'];
 
 const E = (c, x, y, rx, ry, f, a = 0) => { c.beginPath(); c.ellipse(x, y, rx, ry, a, 0, 7); c.fillStyle = f; c.fill(); };
-const RED = '#d9363e', DRK = '#a82530';
+const RED = '#e57790', DRK = '#c4476a', PUR = '#9b86d4';
 
+// box = width and height of the drawing, in units of the cell radius (the PNG is stretched to this box)
 const CELLS = [
- {id:'rbc',cat:'normal',n:'خلية دم حمراء',en:'Red blood cell',r:20,
-  t:'بتنقل الأكسجين بواسطة الهيموجلوبين. شكلها قرص مقعّر من الجهتين، ومن غير نواة عند الثدييات.',
+ {id:'rbc',cat:'normal',n:'Red blood cell',en:'Erythrocyte',r:20,box:[2,2],
+  t:'Carries oxygen using hemoglobin. A biconcave disc (thinner in the middle), and in mammals it has no nucleus.',
   d:(c,r)=>{E(c,0,0,r,r,RED);E(c,0,0,r*.5,r*.5,DRK)}},
- {id:'wbc',cat:'normal',n:'خلية دم بيضاء',en:'White blood cell',r:28,
-  t:'خلية مناعية أكبر من الحمراء ولها نواة. بتدافع عن الجسم ضد العدوى.',
-  d:(c,r)=>{E(c,0,0,r,r,'#e9dfe6');E(c,-r*.15,0,r*.55,r*.45,'#7a4fa3');E(c,r*.35,r*.1,r*.3,r*.3,'#7a4fa3')}},
- {id:'plt',cat:'normal',n:'صفائح دموية',en:'Platelet',r:11,
-  t:'أجزاء صغيرة من خلايا أكبر اسمها megakaryocyte. بتساعد الدم على التجلط.',
-  d:(c,r)=>{E(c,0,0,r,r*.7,'#b58ad6');E(c,r*.2,0,r*.3,r*.2,'#8d5cb5')}},
- {id:'sickle',cat:'human',n:'خلية منجلية',en:'Sickle cell',r:24,
-  t:'بتتشوه لشكل هلال بسبب هيموجلوبين غير طبيعي، وممكن تعلق في الأوعية الصغيرة.',
+ {id:'wbc',cat:'normal',n:'White blood cell',en:'Leukocyte',r:28,box:[2,2],
+  t:'An immune cell, larger than a red cell, with a nucleus. It defends the body against infection.',
+  d:(c,r)=>{E(c,0,0,r,r,'#f3eef9');E(c,-r*.15,0,r*.55,r*.45,PUR);E(c,r*.35,r*.1,r*.3,r*.3,PUR)}},
+ {id:'plt',cat:'normal',n:'Platelet',en:'Thrombocyte',r:11,box:[2,1.4],
+  t:'A small cell fragment, broken off a large cell called a megakaryocyte. Platelets help the blood to clot.',
+  d:(c,r)=>{E(c,0,0,r,r*.7,'#c7b8ea');E(c,r*.2,0,r*.3,r*.2,PUR)}},
+ {id:'sickle',cat:'human',n:'Sickle cell',en:'Drepanocyte',r:24,box:[2.4,1.2],
+  t:'Twisted into a crescent by abnormal hemoglobin (HbS). It can get stuck in small vessels.',
   d:(c,r)=>{c.beginPath();c.moveTo(-r*1.2,0);c.quadraticCurveTo(0,-r*1.2,r*1.2,0);c.quadraticCurveTo(0,-r*.4,-r*1.2,0);c.fillStyle=DRK;c.fill()}},
- {id:'target',cat:'human',n:'خلية هدفية',en:'Target cell',r:20,
-  t:'مركزها غامق وحواليه حلقة فاتحة. بتظهر في الثلاسيميا وبعض أمراض الكبد.',
-  d:(c,r)=>{E(c,0,0,r,r,RED);E(c,0,0,r*.62,r*.62,'#f0a0a4');E(c,0,0,r*.3,r*.3,DRK)}},
- {id:'sphero',cat:'human',n:'خلية كروية',en:'Spherocyte',r:15,
-  t:'صغيرة وغامقة ومن غير منطقة شاحبة في النص. بتظهر في أنيميا انحلال الدم.',
-  d:(c,r)=>{E(c,0,0,r,r,'#8e1f2b')}},
- {id:'schisto',cat:'human',n:'خلية متشظية',en:'Schistocyte',r:17,
-  t:'أجزاء مكسورة من الخلية الحمراء، بتظهر لما الخلايا تتقطع وهي ماشية في أوعية متضررة.',
+ {id:'target',cat:'human',n:'Target cell',en:'Codocyte',r:20,box:[2,2],
+  t:'A dark center surrounded by a pale ring. Seen in thalassemia and some liver diseases.',
+  d:(c,r)=>{E(c,0,0,r,r,RED);E(c,0,0,r*.62,r*.62,'#f6cdbf');E(c,0,0,r*.3,r*.3,DRK)}},
+ {id:'sphero',cat:'human',n:'Spherocyte',en:'Spherical red cell',r:15,box:[2,2],
+  t:'Small and dense, with no pale area in the middle. Seen in hemolytic anemias.',
+  d:(c,r)=>{E(c,0,0,r,r,'#b3405c')}},
+ {id:'schisto',cat:'human',n:'Schistocyte',en:'Fragmented red cell',r:17,box:[1.8,1.6],
+  t:'Broken pieces of red cells. They appear when cells are torn while passing through damaged small vessels.',
   d:(c,r)=>{c.beginPath();[[-.9,-.3],[-.2,-.9],[.8,-.4],[.5,.2],[.9,.7],[-.4,.5]].forEach(([a,b],i)=>i?c.lineTo(a*r,b*r):c.moveTo(a*r,b*r));c.closePath();c.fillStyle=RED;c.fill()}},
- {id:'camel',cat:'animal',n:'خلية الجمل',en:'Camelid red cell',r:21,
-  t:'عند الجمل واللاما: خلايا الدم الحمراء بيضاوية ومن غير نواة.',
+ {id:'camel',cat:'animal',n:'Camelid red cell',en:'Camel and llama',r:21,box:[2.5,1.4],
+  t:'In camels and llamas, red cells are oval and have no nucleus.',
   d:(c,r)=>{E(c,0,0,r*1.25,r*.7,RED);E(c,0,0,r*.6,r*.3,DRK)}},
- {id:'bird',cat:'animal',n:'خلية طائر',en:'Avian red cell',r:21,
-  t:'عند الطيور: خلايا الدم الحمراء بيضاوية وفيها نواة.',
-  d:(c,r)=>{E(c,0,0,r*1.15,r*.8,'#e2606a');E(c,0,0,r*.45,r*.4,'#5a1f4d')}},
- {id:'heinz',cat:'animal',n:'أجسام هاينز',en:'Heinz bodies',r:20,
-  t:'تكتلات هيموجلوبين اتضرر بالأكسدة. بتظهر كنقط على حافة الخلية، وشائعة عند القطط.',
-  d:(c,r)=>{E(c,0,0,r,r,RED);E(c,r*.75,-r*.3,r*.22,r*.22,'#3b1a22');E(c,-r*.6,r*.5,r*.18,r*.18,'#3b1a22')}},
- {id:'babesia',cat:'animal',n:'طفيل البابيزيا',en:'Babesia',r:21,
-  t:'طفيل بيعيش جوه الخلايا الحمراء ويسبب أنيميا انحلالية، خصوصًا عند الكلاب.',
-  d:(c,r)=>{E(c,0,0,r,r,RED);E(c,-r*.3,-r*.1,r*.28,r*.16,'#5b6ee0',.6);E(c,r*.25,r*.2,r*.28,r*.16,'#5b6ee0',-.6)}}
+ {id:'bird',cat:'animal',n:'Bird red cell',en:'Avian erythrocyte',r:21,box:[2.3,1.6],
+  t:'In birds, red cells are oval and have a nucleus.',
+  d:(c,r)=>{E(c,0,0,r*1.15,r*.8,'#ee8aa0');E(c,0,0,r*.45,r*.4,'#7b5aa8')}},
+ {id:'heinz',cat:'animal',n:'Heinz bodies',en:'Oxidized hemoglobin',r:20,box:[2,2],
+  t:'Clumps of hemoglobin damaged by oxidation. They look like dots at the edge of the cell and are common in cats.',
+  d:(c,r)=>{E(c,0,0,r,r,RED);E(c,r*.75,-r*.3,r*.22,r*.22,'#5b2a3a');E(c,-r*.6,r*.5,r*.18,r*.18,'#5b2a3a')}},
+ {id:'babesia',cat:'animal',n:'Babesia parasite',en:'Inside red cells',r:21,box:[2,2],
+  t:'A parasite that lives inside red blood cells and causes hemolytic anemia, especially in dogs.',
+  d:(c,r)=>{E(c,0,0,r,r,RED);E(c,-r*.3,-r*.1,r*.28,r*.16,'#3f8f89',.6);E(c,r*.25,r*.2,r*.28,r*.16,'#3f8f89',-.6)}}
 ];
+const imgs = {};
+DRAWN.forEach(k => { const i = new Image(); i.src = 'cells/' + k + '.png'; imgs[k] = i; });
 
 const cv = document.getElementById('cv'), x = cv.getContext('2d');
 const card = document.getElementById('card'), hud = document.getElementById('hud'), toast = document.getElementById('toast');
@@ -107,8 +107,9 @@ function resize() {
   cv.width = W * d; cv.height = H * d; x.setTransform(d, 0, 0, d, 0, 0);
 }
 addEventListener('resize', resize);
+new ResizeObserver(resize).observe(cv);
 
-const top_ = () => H * .1, bot_ = () => H * .66;
+const top_ = () => H * .14, bot_ = () => H * .66;
 const pool = () => { const p = CELLS.filter(c => c.cat === cat); return cat === 'normal' ? p : p.concat(p, [CELLS[0], CELLS[0], CELLS[0]]); };
 
 function spawn(initial) {
@@ -121,34 +122,66 @@ function spawn(initial) {
 }
 function fill() { cells = []; for (let i = 0; i < 16; i++) spawn(true); }
 
-function drawVessel(ts) {
-  const g = x.createLinearGradient(0, top_() - 30, 0, bot_() + 30);
-  g.addColorStop(0, '#5a1520'); g.addColorStop(.1, '#2a0d13'); g.addColorStop(.9, '#2a0d13'); g.addColorStop(1, '#5a1520');
-  x.fillStyle = '#2a0d13'; x.fillRect(0, top_(), W, bot_() - top_());
-  x.fillStyle = '#6b1a27'; x.fillRect(0, top_() - 22, W, 22); x.fillRect(0, bot_(), W, 22);
-  x.fillStyle = '#8a2536'; x.fillRect(0, top_() - 6, W, 6); x.fillRect(0, bot_(), W, 6);
+let flow = 0;
+function drawVessel() {
+  const t = top_(), b = bot_(), wall = 26;
+  let g;
+  // tissue outside the vessel
+  x.fillStyle = '#f6efeb'; x.fillRect(0, 0, W, H);
+  // vessel wall (top and bottom), darker toward the lumen
+  g = x.createLinearGradient(0, t - wall, 0, t); g.addColorStop(0, '#eccfc5'); g.addColorStop(1, '#cf8f85');
+  x.fillStyle = g; x.fillRect(0, t - wall, W, wall);
+  g = x.createLinearGradient(0, b, 0, b + wall); g.addColorStop(0, '#cf8f85'); g.addColorStop(1, '#eccfc5');
+  x.fillStyle = g; x.fillRect(0, b, W, wall);
+  // endothelial cells in the wall: faint borders and flat nuclei
+  x.strokeStyle = 'rgba(125,51,56,.14)'; x.lineWidth = 1; x.beginPath();
+  for (let i = 0; i < W + 90; i += 90) { x.moveTo(i, t - wall); x.lineTo(i - 8, t); x.moveTo(i + 45, b); x.lineTo(i + 37, b + wall); }
+  x.stroke();
+  x.fillStyle = 'rgba(110,60,110,.16)';
+  for (let i = 40; i < W + 90; i += 90) { x.beginPath(); x.ellipse(i, t - wall / 2 - 2, 15, 4, 0, 0, 7); x.fill(); x.beginPath(); x.ellipse(i + 45, b + wall / 2 + 2, 15, 4, 0, 0, 7); x.fill(); }
+  // plasma: warm, slightly darker near the walls for depth
+  g = x.createLinearGradient(0, t, 0, b);
+  g.addColorStop(0, '#e9b9ad'); g.addColorStop(.16, '#f6dcd3'); g.addColorStop(.5, '#fdeee8'); g.addColorStop(.84, '#f6dcd3'); g.addColorStop(1, '#e9b9ad');
+  x.fillStyle = g; x.fillRect(0, t, W, b - t);
+  // soft flow streaks
+  x.strokeStyle = 'rgba(255,255,255,.45)'; x.lineWidth = 2; x.lineCap = 'round';
+  for (let i = 0; i < 7; i++) {
+    const y = t + (b - t) * (i + .7) / 7.4, len = 70 + (i * 37) % 60, sp = 18 + (i % 3) * 9;
+    const px = ((flow * sp / 30 + i * 223) % (W + 300)) - 150;
+    x.beginPath(); x.moveTo(px, y); x.lineTo(px + len, y); x.stroke();
+  }
+  // thin lining on the lumen edge
+  x.fillStyle = '#b86a68'; x.fillRect(0, t - 3, W, 3); x.fillRect(0, b, W, 3);
 }
 
 function frame(ts) {
   const dt = Math.min((ts - last) / 1000, .05); last = ts;
   const sp = frozen ? .06 : 1;
+  flow += dt * sp * 30;
   x.clearRect(0, 0, W, H);
-  drawVessel(ts);
+  drawVessel();
   for (let i = cells.length - 1; i >= 0; i--) {
     const c = cells[i];
     c.x += c.vx * dt * sp; c.a += c.va * dt * sp;
     if (c.x > W + c.r * 2) { cells.splice(i, 1); spawn(false); continue; }
   }
+  const d = devicePixelRatio || 1;
   for (const c of cells) {
-    x.save(); x.translate(c.x, c.y); x.rotate(c.a);
-    const im = imgs[c.t.id];
-    if (im && im.complete && im.naturalWidth) x.drawImage(im, -c.r, -c.r, c.r * 2, c.r * 2); else c.t.d(x, c.r);
+    if (c === sel) {
+      x.beginPath(); x.arc(c.x, c.y, c.r * 1.45, 0, 7);
+      x.fillStyle = 'rgba(168,72,76,.12)'; x.fill();
+      x.strokeStyle = '#a8484c'; x.lineWidth = 2.5; x.stroke();
+    }
+    x.save();
+    x.shadowColor = 'rgba(110,35,45,.28)'; x.shadowBlur = 8 * d; x.shadowOffsetY = 3 * d;
+    x.translate(c.x, c.y); x.rotate(c.a);
+    const im = imgs[c.t.id], b = c.t.box;
+    if (im && im.complete && im.naturalWidth) x.drawImage(im, -c.r * b[0] / 2, -c.r * b[1] / 2, c.r * b[0], c.r * b[1]); else c.t.d(x, c.r);
     x.restore();
-    if (c === sel) { x.beginPath(); x.arc(c.x, c.y, c.r * 1.5, 0, 7); x.strokeStyle = '#fff'; x.lineWidth = 2; x.stroke(); }
   }
   if (running) {
     time -= dt;
-    if (time <= 0) endGame(); else hud.textContent = `اصطادي: ${target.n}  •  النقاط ${score}  •  ${Math.ceil(time)}ث`;
+    if (time <= 0) endGame(); else hud.textContent = `Catch: ${target.n}  ·  Score ${score}  ·  ${Math.ceil(time)}s`;
   }
   requestAnimationFrame(frame);
 }
@@ -162,13 +195,10 @@ function newTarget() {
   let t; do { t = p[Math.random() * p.length | 0]; } while (p.length > 1 && t === target);
   target = t;
 }
-
-function startGame() {
-  closeCard(); score = 0; time = 45; running = true; newTarget(); fill();
-}
+function startGame() { closeCard(); score = 0; time = 45; running = true; newTarget(); fill(); }
 function endGame() {
   running = false; hud.textContent = ''; frozen = true;
-  showCard(`<h2>خلص الوقت! النتيجة: ${score}</h2><p>جرّبي قسم تاني أو العبي تاني.</p><button class="on" id="again">العبي تاني</button>`);
+  showCard(`<h2>Time's up! Score: ${score}</h2><p>Try another category, or play again.</p><button class="go" id="again">Play again</button>`);
   document.getElementById('again').onclick = () => { frozen = false; startGame(); };
 }
 
@@ -179,11 +209,11 @@ cv.addEventListener('pointerdown', e => {
   if (!best) { if (mode === 'learn') closeCard(); return; }
   if (mode === 'learn') {
     sel = best; frozen = true;
-    showCard(`<h2>${best.t.n}</h2><small>${best.t.en}</small><p>${best.t.t}</p><p class="note">نص تجريبي — يُراجَع طبيًا قبل النشر</p><button id="x">كمّل</button>`);
+    showCard(`<h2>${best.t.n}</h2><small>${best.t.en}</small><p>${best.t.t}</p><p class="note">.</p><button class="go" id="x">Continue</button>`);
     document.getElementById('x').onclick = closeCard;
   } else if (running) {
-    if (best.t === target) { score++; say('✅ صح'); cells.splice(cells.indexOf(best), 1); spawn(false); newTarget(); }
-    else say(`❌ دي ${best.t.n}`);
+    if (best.t === target) { score++; say('Correct!'); cells.splice(cells.indexOf(best), 1); spawn(false); newTarget(); }
+    else say(`That is a ${best.t.n.toLowerCase()}`);
   }
 });
 
@@ -191,7 +221,7 @@ function setMode(m) {
   mode = m; running = false; closeCard(); hud.textContent = '';
   document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
   fill();
-  if (m === 'play') startGame(); else { hud.textContent = 'اضغطي على أي خلية'; }
+  if (m === 'play') startGame(); else hud.textContent = 'Tap any cell to learn about it';
 }
 document.getElementById('modes').onclick = e => { if (e.target.dataset.m) setMode(e.target.dataset.m); };
 document.getElementById('cats').onclick = e => {
