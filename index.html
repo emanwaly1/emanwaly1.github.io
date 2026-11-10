@@ -31,6 +31,9 @@ header.bar strong{font-family:var(--display);font-size:1.2rem}
 header.bar nav{display:flex;gap:22px}
 header.bar nav a{color:var(--ink);text-decoration:none;font-weight:500}
 header.bar nav a:hover{color:var(--coral)}
+header.bar nav a.cvlink{background:var(--coral);color:#fff;font-weight:700;padding:6px 16px;border-radius:999px}
+header.bar nav a.cvlink:hover{background:#c0425b;color:#fff}
+@media(max-width:560px){header.bar nav{gap:12px;font-size:.92rem}header.bar nav a.cvlink{padding:5px 12px}}
 
 /* hero: drifting cells */
 .hero{position:relative;overflow:hidden;padding:56px 0 96px}
@@ -104,6 +107,10 @@ pre i{color:#f6a3b3;font-style:normal}pre b{color:var(--mint);font-weight:500}
 @media(max-width:800px){.cols{grid-template-columns:1fr;gap:28px}}
 .contact a.big{font-family:var(--display);font-weight:700;font-size:clamp(1.5rem,4.5vw,2.6rem);color:var(--coral);word-break:break-all}
 .links{display:flex;flex-wrap:wrap;gap:24px;margin-top:24px}
+/* earlier client work: two inline links inside the About text */
+a.past{color:var(--coral);font-weight:700;text-decoration:none;border-bottom:2px dotted var(--coral);border-radius:3px}
+a.past::after{content:" \2197";font-size:.85em}
+a.past:hover{background:var(--peach)}
 footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
 /* surgery: illustrations + operation training */
 .illus{aspect-ratio:auto;background:#fff;border:1px solid var(--line)}
@@ -145,7 +152,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
 
 <header class="bar">
   <strong>Dr. Eman Waly</strong>
-  <nav aria-label="Main"><a href="#work">Work</a><a href="#code">Code</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
+  <nav aria-label="Main"><a href="#work">Work</a><a href="#code">Code</a><a href="#about">About</a><a href="#contact">Contact</a><a class="cvlink" href="Eman_Waly_Medical_Visualizer_CV.pdf" download>Download CV</a></nav>
 </header>
 
 <main>
@@ -392,7 +399,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
     <div>
       <h2>About</h2>
       <p>I’m a veterinary doctor with 10 years of drawing experience and a background in 2D animation. I understand the science first, then explain it visually.</p>
-      <p>I’ve worked remotely on client projects, including a complete music video for the nasheed artist Ahmed Al-Nafees and an illustrated children’s story for the publisher Hindawi.</p>
+      <p>I’ve worked remotely on client projects, including <a class="past" href="https://www.youtube.com/watch?v=naDkFgyIBCo" target="_blank" rel="noopener">a complete music video for the nasheed artist Ahmed Al-Nafees</a> and <a class="past" href="https://www.booktime.org/en/books/23074340" target="_blank" rel="noopener">an illustrated children’s story for the publisher Hindawi</a>.</p>
       <p>I’m seeking paid opportunities in medical illustration, 3D medical visualization and animation, including full-time, part-time, contract, project-based and internship roles.</p>
     </div>
     <ul class="skills">
@@ -414,6 +421,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
       <a href="https://www.linkedin.com/in/eman-elwaly-955903147/">LinkedIn</a>
       <a href="https://www.instagram.com/ido2223/">Instagram</a>
       <a href="https://www.artstation.com/emanelwaly">ArtStation</a>
+      <a href="Eman_Waly_Medical_Visualizer_CV.pdf" download>Download CV (PDF)</a>
     </div>
   </div>
 </section>
@@ -433,10 +441,10 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   var tabs=document.querySelector('.tabs'), all=[].slice.call(document.querySelectorAll('.panel'));
   // Groups and their order. Use the exact data-title of each panel.
   var groups=[
-    ['Blood and disease mechanism',['Blood flow','Mechanism']],
     ['3D human anatomy',['Brain','Heart','Eye cross-section','Humerus']],
+    ['Blood and disease mechanism',['Blood flow','Mechanism']],
     ['Human disease and physiology',['Heart: septal defect','Heart: ischemia']],
-    ['Veterinary anatomy and surgery',['Canine lungs','Cherry eye','Entropion','Operation training']],
+    ['Veterinary anatomy and surgery',['Cherry eye','Canine lungs','Entropion','Operation training']],
     ['Interactive learning',['Blood cell game']],
     ['References',['Sources']]
   ];
