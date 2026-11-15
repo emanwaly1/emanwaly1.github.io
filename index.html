@@ -34,7 +34,7 @@ header.bar nav a{color:var(--ink);text-decoration:none;font-weight:500}
 header.bar nav a:hover{color:var(--coral)}
 header.bar nav a.cvlink{background:var(--coral);color:#fff;font-weight:700;padding:6px 16px;border-radius:999px}
 header.bar nav a.cvlink:hover{background:#a8354c;color:#fff}
-@media(max-width:560px){header.bar nav{gap:12px;font-size:.92rem}header.bar nav a.cvlink{padding:5px 12px}}
+@media(max-width:560px){header.bar{flex-wrap:wrap;gap:8px 12px}header.bar nav{flex-wrap:wrap;gap:6px 12px;font-size:.92rem}header.bar nav a.cvlink{padding:5px 12px}}
 
 /* hero: drifting cells */
 .hero{position:relative;overflow:hidden;padding:56px 0 96px}
@@ -145,6 +145,33 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
 .src li span{display:block;color:var(--dim);font-size:.9rem}
 .src .tag{display:inline-block;font-style:normal;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:var(--lilac);color:var(--ink);padding:1px 9px;border-radius:999px;margin-right:8px}
 .srclink{display:inline-block;margin-top:12px;font-size:.92rem;font-weight:700}
+
+/* featured: "start here" strip */
+.feat{padding:8px 0 28px}
+.feat .head{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:end;justify-content:space-between;margin-bottom:26px}
+.feat .head .lead{margin-bottom:0}
+.reelbtn{font:700 1rem var(--sans);background:var(--ink);color:#fff;border:0;border-radius:999px;padding:12px 26px;cursor:pointer}
+.reelbtn:hover{background:#000}
+.reelbtn[hidden]{display:none}
+.fgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+@media(max-width:1000px){.fgrid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.fgrid{grid-template-columns:1fr}}
+.fcard{font:inherit;color:inherit;text-align:left;padding:0;cursor:pointer;display:flex;flex-direction:column;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:20px;transition:transform .2s,box-shadow .2s}
+.fcard:hover{transform:translateY(-4px);box-shadow:0 12px 28px #22313a1f}
+@media(prefers-reduced-motion:reduce){.fcard{transition:none}.fcard:hover{transform:none}}
+.fthumb{position:relative;aspect-ratio:4/3;background:repeating-linear-gradient(135deg,#d9ece6 0 14px,#cfe6df 14px 28px)}
+.fthumb img,.fthumb video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top;pointer-events:none}
+.fkind{position:absolute;left:12px;bottom:12px;background:#22313ae6;color:#fff;font-size:.78rem;font-weight:700;letter-spacing:.03em;border-radius:999px;padding:4px 12px}
+.fbody{padding:16px 18px 20px}
+.fbody h3{font-family:var(--display);font-size:1.18rem;line-height:1.25;margin-bottom:6px}
+.fbody p{color:var(--dim);font-size:.95rem}
+.fgo{display:inline-block;margin-top:12px;color:var(--coral);font-weight:700;font-size:.92rem}
+.fcard:hover .fgo{text-decoration:underline}
+#reelDlg{position:fixed;inset:0;z-index:120;background:#101a20f2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:14px}
+#reelDlg[hidden]{display:none}
+#reelDlg .box{position:relative;width:min(1100px,100%);aspect-ratio:16/9;background:#000;border-radius:14px;overflow:hidden}
+#reelDlg iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+#reelDlg button{font:700 .95rem var(--sans);background:#ffffff22;color:#fff;border:0;border-radius:999px;padding:8px 22px;cursor:pointer}
 </style>
 
 </head>
@@ -198,6 +225,36 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
     <a class="cta" href="#work">See the work</a>
   </div>
 </div>
+
+<section id="featured" class="feat" aria-label="Start here">
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <h2>Start here</h2>
+        <p class="lead">Four projects that show the range: 3D anatomy, an interactive lesson, 2D animation and a surgical trainer.</p>
+      </div>
+      <button type="button" class="reelbtn" id="reelBtn" hidden>&#9654; Watch the showreel</button>
+    </div>
+    <div class="fgrid">
+      <button type="button" class="fcard" data-feature="Brain">
+        <span class="fthumb"><img src="https://i.ytimg.com/vi/-zq9SIFxkQs/hqdefault.jpg" alt="" loading="lazy" onerror="this.remove()"><span class="fkind">3D &middot; Interactive</span></span>
+        <span class="fbody"><h3>The brain, piece by piece</h3><p>Toggle the arteries, nerves, dural venous sinuses and midbrain on a model sculpted from a real MRI.</p><span class="fgo">Open project &rarr;</span></span>
+      </button>
+      <button type="button" class="fcard" data-feature="Heart: septal defect">
+        <span class="fthumb"><img src="https://i.ytimg.com/vi/J2oUULkB9pg/hqdefault.jpg" alt="" loading="lazy" onerror="this.remove()"><span class="fkind">Interactive lesson</span></span>
+        <span class="fbody"><h3>Ventricular septal defect</h3><p>A three-step lesson: find the defect, tell oxygenated from deoxygenated blood, then predict the shunt.</p><span class="fgo">Open project &rarr;</span></span>
+      </button>
+      <button type="button" class="fcard" data-feature="Mechanism">
+        <span class="fthumb"><video src="videos/sickle-blood.mp4#t=0.8" muted playsinline preload="metadata" tabindex="-1" aria-hidden="true"></video><span class="fkind">2D animation</span></span>
+        <span class="fbody"><h3>Sickle cell, frame by frame</h3><p>A hand-drawn animation from inheritance to vaso-occlusion, explaining why the cells jam.</p><span class="fgo">Open project &rarr;</span></span>
+      </button>
+      <button type="button" class="fcard" data-feature="Operation training">
+        <span class="fthumb"><img src="threejs-viewer/images/surgery/cherry-eye.jpg" alt="" loading="lazy" onerror="this.remove()"><span class="fkind">Veterinary &middot; Interactive</span></span>
+        <span class="fbody"><h3>Cherry eye surgery trainer</h3><p>Practice the Morgan pocket technique: choose the suture, evert the third eyelid, bury the gland.</p><span class="fgo">Open project &rarr;</span></span>
+      </button>
+    </div>
+  </div>
+</section>
 
 <section id="work">
   <div class="wrap">
@@ -408,7 +465,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
       <li><b>2D</b><span>Hand drawing, Photoshop, Illustrator</span></li>
       <li><b>Animation and editing</b><span>Frame-by-frame 2D animation, After Effects, Moho rigging, Premiere</span></li>
       <li><b>Interactive and web 3D</b><span>Three.js, JavaScript, HTML/CSS, MERN stack: 3D viewers, quizzes and surgical trainers. Also: interactive 3D prototypes in Unity and Spline</span></li>
-      <li><b>Background</b><span>Bachelor of Veterinary Medicine, Cairo University. Information Technology Institute (ITI): Software Fundamentals; Full Stack using MERN</span></li>
+      <li><b>Background</b><span>Bachelor of Veterinary Medicine, Cairo University. Information Technology Institute (ITI), Egypt diplomas: Software Fundamentals; Full Stack using MERN</span></li>
       <li><b>Languages</b><span>Arabic, English</span></li>
     </ul>
   </div>
@@ -552,6 +609,64 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   if('IntersectionObserver' in window){
     new IntersectionObserver(function(e,o){if(e[0].isIntersecting){load(panels[current]);o.disconnect()}},{rootMargin:'300px'}).observe(work);
   } else load(panels[0]);
+})();
+</script>
+<div id="reelDlg" role="dialog" aria-modal="true" aria-label="Showreel" hidden>
+  <div class="box"><iframe title="Showreel" allow="autoplay; fullscreen" allowfullscreen></iframe></div>
+  <button type="button" id="reelClose">Close</button>
+</div>
+
+<script>
+// Start-here cards, showreel and direct links to projects.
+// This script only clicks the existing project tabs; it does not change how they work.
+(function(){
+  var REEL_ID=''; // paste your showreel's YouTube video id here (the part after v=), e.g. 'AbCdEfGhIjK'
+  var tabs=document.querySelector('.tabs'), work=document.getElementById('work');
+  if(!tabs||!work) return;
+  function slug(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')}
+  function tabFor(title){
+    var b=tabs.querySelectorAll('button');
+    for(var i=0;i<b.length;i++){ if(b[i].textContent===title) return b[i]; }
+    return null;
+  }
+  function openProject(title,smooth){
+    var b=tabFor(title); if(!b) return;
+    b.click();
+    work.scrollIntoView({behavior:smooth?'smooth':'auto',block:'start'});
+  }
+  [].forEach.call(document.querySelectorAll('[data-feature]'),function(c){
+    c.addEventListener('click',function(){openProject(c.getAttribute('data-feature'),true)});
+  });
+  // every tab click writes a shareable link, e.g. #project-heart-septal-defect
+  [].forEach.call(tabs.querySelectorAll('button'),function(b){
+    b.addEventListener('click',function(){
+      try{history.replaceState(null,'','#project-'+slug(b.textContent))}catch(e){}
+    });
+  });
+  function fromHash(){
+    var h=location.hash;
+    if(h.indexOf('#project-')!==0) return;
+    var want=h.slice(9), b=tabs.querySelectorAll('button');
+    for(var i=0;i<b.length;i++){
+      if(slug(b[i].textContent)===want){b[i].click();work.scrollIntoView({block:'start'});return}
+    }
+  }
+  fromHash();
+  window.addEventListener('hashchange',fromHash);
+  // showreel: the button stays hidden until REEL_ID is filled in
+  var rb=document.getElementById('reelBtn'), dlg=document.getElementById('reelDlg');
+  if(REEL_ID&&rb&&dlg){
+    var f=dlg.querySelector('iframe');
+    rb.hidden=false;
+    rb.addEventListener('click',function(){
+      f.src='https://www.youtube-nocookie.com/embed/'+REEL_ID+'?autoplay=1&rel=0';
+      dlg.hidden=false;document.documentElement.style.overflow='hidden';
+    });
+    function closeReel(){f.src='about:blank';dlg.hidden=true;document.documentElement.style.overflow=''}
+    document.getElementById('reelClose').addEventListener('click',closeReel);
+    dlg.addEventListener('click',function(e){if(e.target===dlg)closeReel()});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!dlg.hidden)closeReel()});
+  }
 })();
 </script>
 </body>
