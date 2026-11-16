@@ -178,6 +178,14 @@ button.cta{font:700 1.0625rem/1.6 var(--sans);border:0;cursor:pointer}
 #reelDlg .box{position:relative;width:min(1100px,100%);aspect-ratio:16/9;background:#000;border-radius:14px;overflow:hidden}
 #reelDlg iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 #reelDlg button{font:700 .95rem var(--sans);background:#ffffff22;color:#fff;border:0;border-radius:999px;padding:8px 22px;cursor:pointer}
+#reelDlg .box{background:#000 center/cover no-repeat}
+#reelDlg iframe{opacity:0;transition:opacity .25s}
+#reelDlg .box.ready iframe{opacity:1}
+#reelDlg .box:not(.ready)::after{content:"";position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border:4px solid #ffffff55;border-top-color:#fff;border-radius:50%;animation:reelspin .8s linear infinite}
+@keyframes reelspin{to{transform:rotate(360deg)}}
+#reelDlg .row{display:flex;gap:10px;align-items:center}
+#reelDlg a.yt{font:700 .95rem var(--sans);color:#fff;text-decoration:none;background:#ffffff22;border-radius:999px;padding:8px 22px}
+html.reel-open .cell{animation-play-state:paused}
 </style>
 
 </head>
@@ -251,7 +259,7 @@ button.cta{font:700 1.0625rem/1.6 var(--sans);border:0;cursor:pointer}
         <span class="fbody"><h3>Ventricular septal defect</h3><p>A three-step lesson: find the defect, tell oxygenated from deoxygenated blood, then predict the shunt.</p><span class="fgo">Open project &rarr;</span></span>
       </button>
       <button type="button" class="fcard" data-feature="Mechanism">
-        <span class="fthumb"><video src="videos/sickle-blood.mp4#t=0.8" muted playsinline preload="metadata" tabindex="-1" aria-hidden="true"></video><span class="fkind">2D animation</span></span>
+        <span class="fthumb"><video data-lazy-src="videos/sickle-blood.mp4#t=0.8" muted playsinline preload="none" tabindex="-1" aria-hidden="true"></video><span class="fkind">2D animation</span></span>
         <span class="fbody"><h3>Sickle cell, frame by frame</h3><p>A hand-drawn animation from inheritance to vaso-occlusion, explaining why the cells jam.</p><span class="fgo">Open project &rarr;</span></span>
       </button>
       <button type="button" class="fcard" data-feature="Operation training">
@@ -401,7 +409,7 @@ button.cta{font:700 1.0625rem/1.6 var(--sans);border:0;cursor:pointer}
         </article>
 
         <article class="panel" data-title="Mechanism">
-            <div class="media"><video src="videos/sickle-blood.mp4" data-autoplay loop muted playsinline controls preload="metadata"></video></div>
+            <div class="media"><video src="videos/sickle-blood.mp4" data-autoplay loop muted playsinline controls preload="none"></video></div>
           <h3>Sickle cell: the mechanism</h3>
           <p>A hand-drawn, frame-by-frame 2D animation explaining sickle cell disease: inheritance of hemoglobin S (HbS) alleles from carrier parents, the resulting hemoglobin change, HbS polymerization under low-oxygen conditions, red blood cell sickling, and vaso-occlusion.</p>
           <div class="tools">Human · Frame-by-frame 2D animation · Premiere</div>
@@ -618,8 +626,8 @@ button.cta{font:700 1.0625rem/1.6 var(--sans);border:0;cursor:pointer}
 })();
 </script>
 <div id="reelDlg" role="dialog" aria-modal="true" aria-label="Showreel" hidden>
-  <div class="box"><iframe title="Showreel" allow="autoplay; fullscreen" allowfullscreen></iframe></div>
-  <button type="button" id="reelClose">Close</button>
+  <div class="box"><iframe title="Showreel" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+  <div class="row"><button type="button" id="reelClose">Close</button><a class="yt" id="reelYt" target="_blank" rel="noopener">Open on YouTube</a></div>
 </div>
 
 <script>
@@ -662,21 +670,72 @@ button.cta{font:700 1.0625rem/1.6 var(--sans);border:0;cursor:pointer}
   // showreel: the buttons stay hidden until REEL_ID is filled in
   var reelBtns=document.querySelectorAll('[data-reel]'), dlg=document.getElementById('reelDlg');
   if(REEL_ID&&reelBtns.length&&dlg){
-    var f=dlg.querySelector('iframe'), closeBtn=document.getElementById('reelClose'), opener=null;
+    var f=dlg.querySelector('iframe'), box=dlg.querySelector('.box'), yt=document.getElementById('reelYt'),
+        closeBtn=document.getElementById('reelClose'), opener=null, parked=[], vids=[], warmed=false, tm=0;
+    yt.href='https://www.youtube.com/watch?v='+REEL_ID;
+    // open the connections to YouTube before the click, so the player starts faster
+    function warm(){
+      if(warmed)return; warmed=true;
+      ['https://www.youtube-nocookie.com','https://i.ytimg.com','https://www.google.com'].forEach(function(h){
+        var l=document.createElement('link');l.rel='preconnect';l.href=h;document.head.appendChild(l);
+      });
+    }
+    // free the CPU/GPU while the reel plays: unload the 3D viewers and pause other videos
+    function park(){
+      parked=[].slice.call(document.querySelectorAll('iframe[data-src]')).filter(function(x){var u=x.getAttribute('src');return u&&u!=='about:blank'});
+      parked.forEach(function(x){x.src='about:blank'});
+      vids=[].slice.call(document.querySelectorAll('video')).filter(function(v){return !v.paused});
+      vids.forEach(function(v){v.pause()});
+    }
+    function unpark(){
+      parked.forEach(function(x){x.src=x.dataset.src});
+      vids.forEach(function(v){var r=v.play();if(r&&r.catch)r.catch(function(){})});
+      parked=[];vids=[];
+    }
+    f.addEventListener('load',function(){
+      var u=f.getAttribute('src');
+      if(u&&u!=='about:blank'){clearTimeout(tm);box.classList.add('ready')}
+    });
     function openReel(b){
-      opener=b;
-      f.src='https://www.youtube-nocookie.com/embed/'+REEL_ID+'?autoplay=1&rel=0';
-      dlg.hidden=false;document.documentElement.style.overflow='hidden';closeBtn.focus();
+      opener=b; warm(); park();
+      box.classList.remove('ready');
+      box.style.backgroundImage='url(https://i.ytimg.com/vi/'+REEL_ID+'/hqdefault.jpg)';
+      dlg.hidden=false;
+      document.documentElement.style.overflow='hidden';
+      document.documentElement.classList.add('reel-open');
+      closeBtn.focus();
+      // let the dialog paint first, then start the player
+      setTimeout(function(){
+        f.src='https://www.youtube-nocookie.com/embed/'+REEL_ID+'?autoplay=1&rel=0&playsinline=1';
+        tm=setTimeout(function(){box.classList.add('ready')},10000);
+      },60);
     }
     function closeReel(){
-      f.src='about:blank';dlg.hidden=true;document.documentElement.style.overflow='';
+      clearTimeout(tm);
+      f.src='about:blank';dlg.hidden=true;
+      document.documentElement.style.overflow='';
+      document.documentElement.classList.remove('reel-open');
+      unpark();
       if(opener)opener.focus();
     }
-    [].forEach.call(reelBtns,function(b){b.hidden=false;b.addEventListener('click',function(){openReel(b)})});
+    [].forEach.call(reelBtns,function(b){
+      b.hidden=false;
+      b.addEventListener('pointerenter',warm);
+      b.addEventListener('touchstart',warm,{passive:true});
+      b.addEventListener('click',function(){openReel(b)});
+    });
     closeBtn.addEventListener('click',closeReel);
     dlg.addEventListener('click',function(e){if(e.target===dlg)closeReel()});
     document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!dlg.hidden)closeReel()});
   }
+  // load the small preview video only after the page has finished loading
+  function lazyVideos(){
+    [].forEach.call(document.querySelectorAll('video[data-lazy-src]'),function(v){
+      v.preload='metadata';v.src=v.dataset.lazySrc;
+    });
+  }
+  function afterLoad(){ if('requestIdleCallback' in window) requestIdleCallback(lazyVideos,{timeout:3000}); else setTimeout(lazyVideos,1500); }
+  if(document.readyState==='complete') afterLoad(); else window.addEventListener('load',afterLoad);
 })();
 </script>
 </body>
