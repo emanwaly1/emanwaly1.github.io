@@ -146,6 +146,12 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
 .src .tag{display:inline-block;font-style:normal;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:var(--lilac);color:var(--ink);padding:1px 9px;border-radius:999px;margin-right:8px}
 .srclink{display:inline-block;margin-top:12px;font-size:.92rem;font-weight:700}
 
+.ctas{display:flex;flex-wrap:wrap;gap:12px 14px;margin-top:30px}
+.ctas .cta{margin-top:0}
+button.cta{font:700 1.0625rem/1.6 var(--sans);border:0;cursor:pointer}
+.cta[hidden]{display:none}
+.cta.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.cta.ghost:hover{background:var(--ink);color:#fff}
 /* featured: "start here" strip */
 .feat{padding:8px 0 28px}
 .feat .head{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:end;justify-content:space-between;margin-bottom:26px}
@@ -222,7 +228,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
     <h1>Anatomy you can see, animate, interact with </h1>
     <p>I’m a veterinary doctor and 2D &amp; 3D medical visualizer. I translate anatomy, disease and surgical procedures into clear illustrations, animations and interactive learning experiences.</p>
     <div class="badges"><span>Veterinary doctor</span><span>2D &amp; 3D medical visualizer</span><span>Medical illustrator</span><span>Animator</span><span>Interactive learning · Three.js</span><span>ITI software diplomas</span><span>Open to paid opportunities</span></div>
-    <a class="cta" href="#work">See the work</a>
+    <div class="ctas"><a class="cta" href="#work">See the work</a><button type="button" class="cta ghost" data-reel hidden>&#9654; Watch the reel</button></div>
   </div>
 </div>
 
@@ -233,7 +239,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
         <h2>Start here</h2>
         <p class="lead">Four projects that show the range: 3D anatomy, an interactive lesson, 2D animation and a surgical trainer.</p>
       </div>
-      <button type="button" class="reelbtn" id="reelBtn" hidden>&#9654; Watch the showreel</button>
+      <button type="button" class="reelbtn" data-reel hidden>&#9654; Watch the showreel</button>
     </div>
     <div class="fgrid">
       <button type="button" class="fcard" data-feature="Brain">
@@ -620,7 +626,7 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
 // Start-here cards, showreel and direct links to projects.
 // This script only clicks the existing project tabs; it does not change how they work.
 (function(){
-  var REEL_ID=''; // paste your showreel's YouTube video id here (the part after v=), e.g. 'AbCdEfGhIjK'
+  var REEL_ID='cgMORrwzg7E'; // YouTube id of the showreel (the part after v= or after youtu.be/)
   var tabs=document.querySelector('.tabs'), work=document.getElementById('work');
   if(!tabs||!work) return;
   function slug(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')}
@@ -653,17 +659,21 @@ footer{padding:20px 0 52px;color:var(--dim);font-size:.9rem}
   }
   fromHash();
   window.addEventListener('hashchange',fromHash);
-  // showreel: the button stays hidden until REEL_ID is filled in
-  var rb=document.getElementById('reelBtn'), dlg=document.getElementById('reelDlg');
-  if(REEL_ID&&rb&&dlg){
-    var f=dlg.querySelector('iframe');
-    rb.hidden=false;
-    rb.addEventListener('click',function(){
+  // showreel: the buttons stay hidden until REEL_ID is filled in
+  var reelBtns=document.querySelectorAll('[data-reel]'), dlg=document.getElementById('reelDlg');
+  if(REEL_ID&&reelBtns.length&&dlg){
+    var f=dlg.querySelector('iframe'), closeBtn=document.getElementById('reelClose'), opener=null;
+    function openReel(b){
+      opener=b;
       f.src='https://www.youtube-nocookie.com/embed/'+REEL_ID+'?autoplay=1&rel=0';
-      dlg.hidden=false;document.documentElement.style.overflow='hidden';
-    });
-    function closeReel(){f.src='about:blank';dlg.hidden=true;document.documentElement.style.overflow=''}
-    document.getElementById('reelClose').addEventListener('click',closeReel);
+      dlg.hidden=false;document.documentElement.style.overflow='hidden';closeBtn.focus();
+    }
+    function closeReel(){
+      f.src='about:blank';dlg.hidden=true;document.documentElement.style.overflow='';
+      if(opener)opener.focus();
+    }
+    [].forEach.call(reelBtns,function(b){b.hidden=false;b.addEventListener('click',function(){openReel(b)})});
+    closeBtn.addEventListener('click',closeReel);
     dlg.addEventListener('click',function(e){if(e.target===dlg)closeReel()});
     document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!dlg.hidden)closeReel()});
   }
